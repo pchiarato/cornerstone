@@ -32,10 +32,12 @@
             
             // uint16 -> [uint8, uint8, ~, ~]
             // Only unsigned is implemented. Shader will also need to support other formats.
-            data[ii+0] = (val & 0x0000FF00) >> 8;
-            data[ii+1] = (val & 0x000000FF);
-            data[ii+2] = 0;
-            data[ii+3] = 0;
+            //data[offset++] = (val & 0x000000FF);
+            //data[offset++] = (val & 0x0000FF00) >> 8;
+            //data[offset+2] = 0;
+            //data[offset+3] = 0;
+            data[offset++]=parseInt(val & 0xFF);
+            data[offset++]=parseInt(val >> 8)
         }
         return data;
     }
@@ -54,19 +56,35 @@
             'v_texCoord = a_texCoord;' +
         '}';
 
-    cornerstone.shaders.int16.frag = 'precision mediump float;' +
+  //modalityLutValue = storedValue * slope + intercept;
+  //voiLutValue = (((modalityLutValue - (localWindowCenter)) / (localWindowWidth) + 0.5) * 255.0);
+  //clampedValue = Math.min(Math.max(voiLutValue, 0), 255);
+
+  cornerstone.shaders.int16.frag = 'precision mediump float;' +
         'uniform sampler2D u_image;' +
         'uniform vec2 u_wl;' +
         'uniform vec2 u_slopeIntercept;' +
         'varying vec2 v_texCoord;' +
         'void main() {' +
             'vec4 packedTextureElement = texture2D(u_image, v_texCoord);' +
-            // unpacking [ [uint8, uint8, ~, ~]] -> float and compute slope intercept
-            'float grayLevel = (packedTextureElement[0]*255.0*256.0 + packedTextureElement[1]*255.0) * u_slopeIntercept[0] + u_slopeIntercept[1];' +
-            // W/L transformation.
-            'float grayLevel_wl = clamp( ( grayLevel - u_wl[0] ) / (u_wl[1] - u_wl[0]), 0.0, 1.0);' +
-            // RGBA output'
-            'gl_FragColor = vec4(grayLevel_wl, grayLevel_wl, grayLevel_wl, 1);' +
+
+            'float intensity = packedTextureElement.r*256.0 + packedTextureElement.a*65536.0;'+
+            'float rescaleSlope = float(u_slopeIntercept[0]);'+
+            'float rescaleIntercept = float(u_slopeIntercept[1]);'+
+            'float ww = u_wl[1];'+
+            'float wc = u_wl[0];'+
+
+            'intensity = intensity * rescaleSlope + rescaleIntercept;'+
+            'float lower_bound = (ww * -0.5) + wc; '+
+            'float upper_bound = (ww *  0.5) + wc; '+
+            'float center0 = wc - 0.5;'+
+            //'center0 -= minPixelValue;'+
+
+            'float width0 = ww - 1.0;'+
+            'intensity = (intensity - center0) / width0 + 0.5;'+
+
+            // RGBA output's
+            'gl_FragColor = vec4(intensity, intensity, intensity, 1);' +
         '}';
 
 }(cornerstone));
