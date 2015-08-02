@@ -90,11 +90,12 @@ In this example, javascript is used to image enable a div.
 
         var element = document.getElementById('dicomImage');
         cornerstone.enable(element);
-        cornerstoneTools.mouseInput.enable(element);
-        cornerstoneTools.mouseWheelInput.enable(element);
-
         cornerstone.loadImage(imageId).then(function(image) {
             cornerstone.displayImage(element, image);
+
+            cornerstoneTools.mouseInput.enable(element);
+            cornerstoneTools.mouseWheelInput.enable(element);
+            
             cornerstoneTools.wwwc.activate(element, 1);
             cornerstoneTools.pan.activate(element, 2);
             cornerstoneTools.zoom.activate(element, 4);

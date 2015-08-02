@@ -1442,6 +1442,25 @@ if(typeof cornerstone === 'undefined'){
 
     "use strict";
 
+    function getShader(image) {
+        var datatype = image.datatype;
+        datatype = "int16";
+        //datatype = "uint8";
+        if (cornerstone.shaders.hasOwnProperty(datatype)) {
+            return cornerstone.shaders[datatype];
+        }
+        var shader = cornerstone.shaders.rgb;
+        return shader;
+    }
+
+    cornerstone.rendering.getShader = getShader;
+
+}(cornerstone));
+
+(function (cornerstone) {
+
+    "use strict";
+
     function initShaders(gl, fragShaderSrc, vertexShaderSrc) {
         // Create shader program
         var shaderProgram = gl.createProgram();
@@ -1484,14 +1503,18 @@ if(typeof cornerstone === 'undefined'){
     "use strict";
 
     function initWebGL(canvas) {
-        // TODO for cornerstone : use failIfMajorPerformanceCaveat to determine if fallback is required.
-        //      https://www.khronos.org/registry/webgl/specs/latest/1.0/#5.2.1
         var gl = null;
         try {
             // Try to grab the standard context. If it fails, fallback to experimental.
-            gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+            var options = {
+                preserveDrawingBuffer: true, // preserve buffer so we can copy to display canvas element
+                failIfMajorPerformanceCaveat: true
+            };
+            gl = canvas.getContext("webgl", options) || canvas.getContext("experimental-webgl", options);
         }
-        catch(e) {}
+        catch(error) {
+            throw "Error creating WebGL context";
+        }
 
         // If we don't have a GL context, give up now
         if (!gl) {
@@ -2051,19 +2074,19 @@ if(typeof cornerstone === 'undefined'){
         var pixelData = image.getPixelData();
 
         // Get A WebGL context
-        var canvas = enabledElement.canvas;
-        gl = cornerstone.rendering.initWebGL(canvas);
+        gl = cornerstone.rendering.initWebGL(grayscaleRenderCanvas);
         
         // Set the current shader
-        var shader = cornerstone.shaders.int16;
-        //var shader = cornerstone.shaders.uint8;
+        var shader = cornerstone.rendering.getShader(image);
         program = getShaderProgram(gl, shader);
 
         gl.clearColor(0.5, 0.0, 0.0, 1.0);
 
         var width = image.width;
         var height = image.height;
-        var format = gl.RGBA;
+
+        // Get the texture format for this datatype
+        var format = shader.format;
 
         // GL texture configuration
         var texture = gl.createTexture();
@@ -2146,9 +2169,15 @@ if(typeof cornerstone === 'undefined'){
             throw "drawImage: image must be loaded before it can be drawn";
         }
 
-        var canvas = enabledElement.canvas;
-        var shader = cornerstone.shaders.int16;
-        //var shader = cornerstone.shaders.uint8;
+        // get the canvas context and reset the transform
+        var context = enabledElement.canvas.getContext('2d');
+        context.setTransform(1, 0, 0, 1, 0, 0);
+
+        // clear the canvas
+        context.fillStyle = 'black';
+        context.fillRect(0,0, enabledElement.canvas.width, enabledElement.canvas.height);
+
+        var shader = cornerstone.rendering.getShader(image);
         gl = getWebGLContext(enabledElement, image, invalidated);
         program = getShaderProgram(gl, shader);
 
@@ -2161,7 +2190,13 @@ if(typeof cornerstone === 'undefined'){
 
         // set initial window/level (vec2)
         var wlLocation = gl.getUniformLocation(program, "u_wl");
-        gl.uniform2f(wlLocation, enabledElement.viewport.voi.windowCenter, enabledElement.viewport.voi.windowWidth);
+        var windowCenter = enabledElement.viewport.voi.windowCenter;
+        
+        if(image.invert === true) {
+            //windowCenter = -windowCenter;
+        }
+
+        gl.uniform2f(wlLocation, windowCenter, enabledElement.viewport.voi.windowWidth);
 
         // set Slope Intercept (vec2)
         var siLocation = gl.getUniformLocation(program, "u_slopeIntercept");
@@ -2170,6 +2205,12 @@ if(typeof cornerstone === 'undefined'){
         // Do the actual rendering
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+        // save the canvas context state and apply the viewport properties
+        cornerstone.setToPixelCoordinateSystem(enabledElement, context);
+
+
+        context.drawImage(grayscaleRenderCanvas, 0,0, image.width, image.height, 0, 0, image.width, image.height);
 
         // Save lastRendered information
         lastRenderedImageId = image.imageId;
@@ -2452,45 +2493,31 @@ if(typeof cornerstone === 'undefined'){
         cornerstone.shaders = {};
     }
 
-    if (!cornerstone.shaders.int16) {
-        cornerstone.shaders.int16 = {};
-    }
+    // For int16 pack uint16 into two uint8 channels (r and a)
+    var shader = {
+        format: 6410 // Equivalent to gl.LUMINANCE_ALPHA
+    };
 
     function storedPixelDataToImageData(pixelData, width, height) {
-        // Transfer image data.
-        // Some WebGL implementation supports floats components that could be used with medical images.
-        // However, it rely a optional extension that is not supported by all hardware.
-        // Furthermore, float textures have 4 channels (usually for RGBA) which means that each pixel requires
-        // 16 bytes (4 floats32) of memory. To mitigate both issues, I have decided pack 16 bit in the 2 first
-        // uint8 components (r and g). b and a are still available for other purposes.
-        //
-        // Credit to @jpambrun
+        // Transfer image data to alpha and luminance channels of WebGL texture
+        // Credit to @jpambrun and @fernandojsg
 
-        // Create texture, pack uint16 into two uint8 (r and g) and concatenate.
-        var numberOfChannels = 4;
+        // Pack uint16 into two uint8 channels (r and a)
+        var numberOfChannels = 2;
         var data = new Uint8Array(width * height * numberOfChannels);
-        // ii+=4 iterates over each pixels, not components.
-        for (var ii = 0; ii < data.length; ii+=4) {
-            // ugly modulo magic to translate ii to image coordinate and concatenate.
-            var x = Math.floor(ii/4)%width;
-            var y = Math.floor(Math.floor(ii/4)/height);
-            var val = pixelData[(y%width)*width+(x%height)];
-            
-            // uint16 -> [uint8, uint8, ~, ~]
-            // Only unsigned is implemented. Shader will also need to support other formats.
-            //data[offset++] = (val & 0x000000FF);
-            //data[offset++] = (val & 0x0000FF00) >> 8;
-            //data[offset+2] = 0;
-            //data[offset+3] = 0;
-            data[offset++]=parseInt(val & 0xFF);
-            data[offset++]=parseInt(val >> 8)
+        var offset = 0;
+
+        for (var i = 0; i < pixelData.length; i++) {
+            var val = pixelData[i];
+            data[offset++] = parseInt(val & 0xFF, 10);
+            data[offset++] = parseInt(val >> 8, 10);
         }
         return data;
     }
 
-    cornerstone.shaders.int16.storedPixelDataToImageData = storedPixelDataToImageData;
+    shader.storedPixelDataToImageData = storedPixelDataToImageData;
 
-    cornerstone.shaders.int16.vert = 'attribute vec2 a_position;' +
+    shader.vert = 'attribute vec2 a_position;' +
         'attribute vec2 a_texCoord;' +
         'uniform vec2 u_resolution;' +
         'varying vec2 v_texCoord;' +
@@ -2502,11 +2529,7 @@ if(typeof cornerstone === 'undefined'){
             'v_texCoord = a_texCoord;' +
         '}';
 
-  //modalityLutValue = storedValue * slope + intercept;
-  //voiLutValue = (((modalityLutValue - (localWindowCenter)) / (localWindowWidth) + 0.5) * 255.0);
-  //clampedValue = Math.min(Math.max(voiLutValue, 0), 255);
-
-  cornerstone.shaders.int16.frag = 'precision mediump float;' +
+  shader.frag = 'precision mediump float;' +
         'uniform sampler2D u_image;' +
         'uniform vec2 u_wl;' +
         'uniform vec2 u_slopeIntercept;' +
@@ -2533,6 +2556,8 @@ if(typeof cornerstone === 'undefined'){
             'gl_FragColor = vec4(intensity, intensity, intensity, 1);' +
         '}';
 
+    cornerstone.shaders.int16 = shader;
+
 }(cornerstone));
 (function (cornerstone) {
 
@@ -2542,9 +2567,10 @@ if(typeof cornerstone === 'undefined'){
         cornerstone.shaders = {};
     }
 
-    if (!cornerstone.shaders.rgb) {
-        cornerstone.shaders.rgb = {};
-    }
+    // Pack RGB images into a 3-channel RGB texture
+    var shader = {
+        format: 6407 // Equivalent to gl.RGB
+    };
 
     function storedColorPixelDataToCanvasImageData(image, lut) {
         var minPixelValue = image.minPixelValue;
@@ -2576,10 +2602,9 @@ if(typeof cornerstone === 'undefined'){
         return localCanvasImageDataData;
     }
 
+    shader.storedColorPixelDataToCanvasImageData = storedColorPixelDataToCanvasImageData;
 
-    cornerstone.shaders.rgb.storedColorPixelDataToCanvasImageData = storedColorPixelDataToCanvasImageData;
-
-    cornerstone.shaders.rgb.vert = 'attribute vec2 a_position;' +
+    shader.vert = 'attribute vec2 a_position;' +
         'attribute vec2 a_texCoord;' +
         'uniform vec2 u_resolution;' +
         'varying vec2 v_texCoord;' +
@@ -2591,7 +2616,7 @@ if(typeof cornerstone === 'undefined'){
             'v_texCoord = a_texCoord;' +
         '}';
 
-    cornerstone.shaders.rgb.frag = 'precision mediump float;' +
+    shader.frag = 'precision mediump float;' +
         'uniform sampler2D u_image;' +
         'uniform vec2 u_wl;' +
         'uniform vec2 u_slopeIntercept;' +
@@ -2607,6 +2632,8 @@ if(typeof cornerstone === 'undefined'){
             'gl_FragColor = vec4(packedTextureElement[0], packedTextureElement[1], packedTextureElement[2], 1);' +
         '}';
 
+    cornerstone.shaders.rgb = shader;
+
 }(cornerstone));
 (function (cornerstone) {
 
@@ -2616,9 +2643,10 @@ if(typeof cornerstone === 'undefined'){
         cornerstone.shaders = {};
     }
 
-    if (!cornerstone.shaders.uint8) {
-        cornerstone.shaders.uint8 = {};
-    }
+    // For uint8 pack into alpha channel
+    var shader = {
+        format: 6406 // Equivalent to gl.ALPHA
+    };
 
     function storedPixelDataToImageData(pixelData, width, height) {
         var numberOfChannels = 4;
@@ -2639,9 +2667,9 @@ if(typeof cornerstone === 'undefined'){
         return data;
     }
 
-    cornerstone.shaders.uint8.storedPixelDataToImageData = storedPixelDataToImageData;
+    shader.storedPixelDataToImageData = storedPixelDataToImageData;
 
-    cornerstone.shaders.uint8.vert = 'attribute vec2 a_position;' +
+    shader.vert = 'attribute vec2 a_position;' +
         'attribute vec2 a_texCoord;' +
         'uniform vec2 u_resolution;' +
         'varying vec2 v_texCoord;' +
@@ -2653,7 +2681,7 @@ if(typeof cornerstone === 'undefined'){
             'v_texCoord = a_texCoord;' +
         '}';
 
-    cornerstone.shaders.uint8.frag = 'precision mediump float;' +
+    shader.frag = 'precision mediump float;' +
         'uniform sampler2D u_image;' +
         'uniform vec2 u_wl;' +
         'uniform vec2 u_slopeIntercept;' +
@@ -2667,6 +2695,8 @@ if(typeof cornerstone === 'undefined'){
             // RGBA output'
             'gl_FragColor = vec4(grayLevel_wl, grayLevel_wl, grayLevel_wl, 1);' +
         '}';
+
+    cornerstone.shaders.uint8 = shader;
 
 }(cornerstone));
 /**
