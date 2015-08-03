@@ -1447,6 +1447,7 @@ if(typeof cornerstone === 'undefined'){
         datatype = datatype || "int16";
         // We need a mechanism for
         // choosing the shader based on the image datatype
+        console.log("Datatype: " + image.datatype);
         if (cornerstone.shaders.hasOwnProperty(datatype)) {
             return cornerstone.shaders[datatype];
         }
@@ -1699,6 +1700,7 @@ if(typeof cornerstone === 'undefined'){
     var colorRenderCanvasData;
     var gl;
     var program;
+    var shader;
 
     var lastRenderedImageId;
     var lastRenderedViewport = {};
@@ -1727,6 +1729,13 @@ if(typeof cornerstone === 'undefined'){
         return program;
     }
 
+    function getShader(image) {
+        if (!shader) {
+            shader = shader = cornerstone.shaders.rgb; //cornerstone.rendering.getShader(image);
+        }
+        return shader;
+    }
+
     function initializeWebGLContext(enabledElement) {
         var image = enabledElement.image;
 
@@ -1745,8 +1754,7 @@ if(typeof cornerstone === 'undefined'){
         }
 
         // Set the current shader
-        //var shader = cornerstone.rendering.getShader(image);
-        var shader = cornerstone.shaders.rgb;
+        shader = getShader(image);
         program = getShaderProgram(gl, shader);
 
         gl.clearColor(0.5, 0.0, 0.0, 1.0);
@@ -1819,7 +1827,7 @@ if(typeof cornerstone === 'undefined'){
         // If our render canvas does not match the size of this image reset it
         // NOTE: This might be inefficient if we are updating multiple images of different
         // sizes frequently.
-        if (colorRenderCanvas.width !== image.width || colorRenderCanvas.height != image.height) {
+        if (invalidated || colorRenderCanvas.width !== image.width || colorRenderCanvas.height != image.height) {
             initializeWebGLContext(enabledElement);
         }
         return gl;
@@ -1863,9 +1871,7 @@ if(typeof cornerstone === 'undefined'){
             return;
         }
 
-        //var shader = cornerstone.rendering.getShader(image);
-        var shader = cornerstone.shaders.rgb;
-
+        shader = getShader(image);
         program = getShaderProgram(gl, shader);
 
         var width = image.width;
@@ -2087,6 +2093,7 @@ if(typeof cornerstone === 'undefined'){
     var grayscaleRenderCanvasData;
     var gl;
     var program;
+    var shader;
 
     var lastRenderedImageId;
     var lastRenderedViewport = {};
@@ -2098,6 +2105,13 @@ if(typeof cornerstone === 'undefined'){
         return program;
     }
 
+    function getShader(image) {
+        if (!shader) {
+            shader = cornerstone.rendering.getShader(image);
+        }
+        return shader;
+    }
+        
     function initializeWebGLContext(enabledElement) {
         var image = enabledElement.image;
 
@@ -2116,7 +2130,7 @@ if(typeof cornerstone === 'undefined'){
         }
 
         // Set the current shader
-        var shader = cornerstone.rendering.getShader(image);
+        shader = getShader(image);
         program = getShaderProgram(gl, shader);
 
         gl.clearColor(0.5, 0.0, 0.0, 1.0);
@@ -2187,7 +2201,7 @@ if(typeof cornerstone === 'undefined'){
         // If our render canvas does not match the size of this image reset it
         // NOTE: This might be inefficient if we are updating multiple images of different
         // sizes frequently.
-        if (grayscaleRenderCanvas.width !== image.width || grayscaleRenderCanvas.height != image.height) {
+        if (invalidated || grayscaleRenderCanvas.width !== image.width || grayscaleRenderCanvas.height != image.height) {
             initializeWebGLContext(enabledElement);
         }
         return gl;
@@ -2196,7 +2210,7 @@ if(typeof cornerstone === 'undefined'){
     /**
      * API function to draw a grayscale image to a given enabledElement
      * @param enabledElement
-     * @param invalidated - true if pixel data has been invaldiated and cached rendering should not be used
+     * @param invalidated - true if pixel data has been invalidated and cached rendering should not be used
      */
     function renderGrayscaleImageWebGL(enabledElement, invalidated) {
         if (!enabledElement) {
@@ -2225,7 +2239,7 @@ if(typeof cornerstone === 'undefined'){
             context.mozImageSmoothingEnabled = true;
         }
 
-        var shader = cornerstone.rendering.getShader(image);
+        shader = cornerstone.rendering.getShader(image);
         gl = getWebGLContext(enabledElement, image, invalidated);
 
         if (!gl) {
@@ -2546,7 +2560,7 @@ if(typeof cornerstone === 'undefined'){
         cornerstone.shaders = {};
     }
 
-    // For int16 pack uint16 into two uint8 channels (r and a)
+    // For int16 pack int16 into two uint8 channels (r and a)
     var shader = {
         format: 'LUMINANCE_ALPHA'
     };
@@ -2555,7 +2569,7 @@ if(typeof cornerstone === 'undefined'){
         // Transfer image data to alpha and luminance channels of WebGL texture
         // Credit to @jpambrun and @fernandojsg
 
-        // Pack uint16 into two uint8 channels (r and a)
+        // Pack int16 into two uint8 channels (r and a)
         var numberOfChannels = 2;
         var data = new Uint8Array(width * height * numberOfChannels);
         var offset = 0;
@@ -2610,6 +2624,7 @@ if(typeof cornerstone === 'undefined'){
         '}';
 
     cornerstone.shaders.int16 = shader;
+    cornerstone.shaders.uint16 = shader;
 
 }(cornerstone));
 (function (cornerstone) {
@@ -2637,7 +2652,6 @@ if(typeof cornerstone === 'undefined'){
 
         // NOTE: As of Nov 2014, most javascript engines have lower performance when indexing negative indexes.
         // We have a special code path for this case that improves performance.  Thanks to @jpambrun for this enhancement
-        console.log(minPixelValue);
         if (minPixelValue < 0){
             while (storedPixelDataIndex < numPixels) {
                 localCanvasImageDataData[canvasImageDataIndex++] = localLut[storedPixelData[storedPixelDataIndex++] + (-minPixelValue)]; // red
