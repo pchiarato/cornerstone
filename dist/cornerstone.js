@@ -1481,7 +1481,7 @@ if(typeof cornerstone === 'undefined'){
         gl.shaderSource(vertexShader, vertexShaderSrc);
         gl.compileShader(vertexShader);
         if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-            throw "An error occurred compiling the vertex shader" + gl.getShaderInfoLog(fragmentShader);
+            throw "An error occurred compiling the vertex shader" + gl.getShaderInfoLog(vertexShader);
         }
         gl.attachShader(shaderProgram, vertexShader);
 
@@ -1489,7 +1489,7 @@ if(typeof cornerstone === 'undefined'){
 
         // If creating the shader program failed, alert
         if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-            throw "Unable to initialize the shader program." + gl.getShaderInfoLog(fragmentShader);
+            throw "Unable to initialize the shader program." + gl.getShaderInfoLog(shaderProgram);
         }
 
         gl.useProgram(shaderProgram);
@@ -2696,7 +2696,7 @@ if(typeof cornerstone === 'undefined'){
         'uniform float minPixelValue;' +
         'uniform int invert;' +
         'varying vec2 v_texCoord;' +
-        
+
         'void main() {' +
             
             // Get texture
