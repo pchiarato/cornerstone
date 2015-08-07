@@ -1739,7 +1739,6 @@ if(typeof cornerstone === 'undefined'){
      */
     function renderColorImageWebGL(enabledElement, invalidated) {
 
-        console.log("ASDASDF");
         cornerstone.rendering.webGLRenderer.render(enabledElement);
 
     }
@@ -2026,6 +2025,7 @@ order vert, frag
     var programs;
     var shader;
     var texCoordBuffer, positionBuffer;
+    var texturesCache={};
 
     function initShaders() {
 
@@ -2113,11 +2113,11 @@ order vert, frag
     function enableImageTexture( image ) {
         
         //@todo cache?
-        if ( !image.texture ) {
-            image.texture = generateTexture( image );
-            console.log("Generating texture");
+        if ( !texturesCache[ image.imageId ] ) {
+            texturesCache[ image.imageId ] = generateTexture( image );
+            console.log("Generating texture for imageid: ", image.imageId);
         }
-        gl.bindTexture(gl.TEXTURE_2D, image.texture);
+        gl.bindTexture(gl.TEXTURE_2D, texturesCache[ image.imageId ]);
 
     }
 
@@ -2288,8 +2288,6 @@ order vert, frag
 
         }
 
-        console.log(shader);
-
         for (var key in parameters)
         {
             var uniformLocation = gl.getUniformLocation(shader.program, key);
@@ -2361,11 +2359,6 @@ order vert, frag
         initRenderer:initRenderer
     };
 
-/*
-    // Module exports
-    cornerstone.rendering.grayscaleImageWebGL = renderColorImageWebGL;
-    cornerstone.renderColorImageWebGL = renderColorImageWebGL;
-*/
 }(cornerstone));
 
 
