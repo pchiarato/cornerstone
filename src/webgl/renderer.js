@@ -2,6 +2,10 @@
 
     "use strict";
 
+    if (!cornerstone.webGL) {
+        cornerstone.webGL = {};
+    }
+
     var renderCanvas = document.createElement('canvas');
     var renderCanvasContext;
     var renderCanvasData;
@@ -9,18 +13,20 @@
     var programs;
     var shader;
     var texCoordBuffer, positionBuffer;
-    var texturesCache={};
+    var texturesCache = {};
+    cornerstone.webGL.isWebGLInitialized = false;
 
     function initShaders() {
 
-        for (var id in cornerstone.shaders) {
+        for (var id in cornerstone.webGL.shaders) {
 
             console.log("WEBGL: Loading shader",id);
-            var shader = cornerstone.shaders[ id ];
+            var shader = cornerstone.webGL.shaders[ id ];
             shader.attributes = {};
             shader.uniforms = {};
+            shader.vert = cornerstone.webGL.vertexShader;
 
-            shader.program = cornerstone.rendering.createProgramFromString(gl, shader.vert, shader.frag);
+            shader.program = cornerstone.webGL.createProgramFromString(gl, shader.vert, shader.frag);
 
             shader.attributes.texCoordLocation = gl.getAttribLocation(shader.program, "a_texCoord");
             gl.enableVertexAttribArray(shader.attributes.texCoordLocation);
@@ -29,24 +35,26 @@
             gl.enableVertexAttribArray(shader.attributes.positionLocation);
         
             shader.uniforms.resolutionLocation = gl.getUniformLocation(shader.program, "u_resolution");
-
-        }  
+        }
     }
 
     function initRenderer() {
-
+        if (cornerstone.webGL.isWebGLInitialized === true) {
+            console.log("WEBGL Renderer already initialized", gl);
+            return;
+        }
         if ( initWebGL( renderCanvas ) ) {
-            
             initBuffers();
             initShaders();
             console.log("WEBGL Renderer initialized!", gl);
+            cornerstone.webGL.isWebGLInitialized = true;
         }
     }
 
     function updateRectangle(gl, width, height) {
 
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            width, height, 
+            width, height,
             0, height,
             width, 0,
             0, 0]), gl.STATIC_DRAW);
@@ -75,9 +83,16 @@
     }
 
     function getImageDataType(image) {
-        
-        return image.color ? "rgb" : image.datatype || "int16";
+        if (image.color) {
+            return 'rgb';
+        }
 
+        if (!image.datatype) {
+            return 'int16';
+        }
+        var datatype = image.datatype;
+        datatype = datatype.replace('uint', 'int');
+        return datatype;
     }
 
     function getShaderProgram(image) {
@@ -85,12 +100,12 @@
         var datatype = getImageDataType(image);
         // We need a mechanism for
         // choosing the shader based on the image datatype
-        console.log("Datatype: " + datatype);
-        if (cornerstone.shaders.hasOwnProperty(datatype)) {
-            return cornerstone.shaders[ datatype ];
+        // console.log("Datatype: " + datatype);
+        if (cornerstone.webGL.shaders.hasOwnProperty(datatype)) {
+            return cornerstone.webGL.shaders[ datatype ];
         }
 
-        var shader = cornerstone.shaders.rgb;
+        var shader = cornerstone.webGL.shaders.rgb;
         return shader;
     }
 
@@ -110,11 +125,9 @@
         
         var TEXTURE_FORMAT = {
             "rgb": gl.RGB,
-            "uint8": gl.LUMINANCE,
             "int8": gl.LUMINANCE,
-            "uint16": gl.LUMINANCE_ALPHA,
             "int16": gl.LUMINANCE_ALPHA
-        }
+        };
 
         var imageDataType = getImageDataType(image);
         var format = TEXTURE_FORMAT[imageDataType];
@@ -130,7 +143,7 @@
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
 
-        var imageData = cornerstone.shaders[imageDataType].storedPixelDataToImageData(image, image.width, image.height);
+        var imageData = cornerstone.webGL.dataUtilities[imageDataType].storedPixelDataToImageData(image, image.width, image.height);
 
         gl.texImage2D(gl.TEXTURE_2D, 0, format, image.width, image.height, 0, format, gl.UNSIGNED_BYTE, imageData);
 
@@ -143,16 +156,16 @@
         positionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            1, 1, 
-            0, 1, 
-            1, 0, 
+            1, 1,
+            0, 1,
+            1, 0,
             0, 0
         ]), gl.STATIC_DRAW);
  
  
         texCoordBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([         
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
             1.0, 1.0,
             0.0, 1.0,
             1.0, 0.0,
@@ -176,8 +189,7 @@
         gl.enableVertexAttribArray(shader.attributes.positionLocation);
         gl.vertexAttribPointer(shader.attributes.positionLocation, 2, gl.FLOAT, false, 0, 0);
 
-        for (var key in parameters)
-        {
+        for (var key in parameters) {
             var uniformLocation = gl.getUniformLocation(shader.program, key);
             if ( !uniformLocation ) {
                 throw "Could not access location for uniform: " + key;
@@ -188,16 +200,11 @@
             var type = uniform.type;
             var value = uniform.value;
 
-            if( type == "i" )
-            {
+            if( type == "i" ) {
                 gl.uniform1i( uniformLocation, value );
-            }
-            else if( type == "f" )
-            {
+            } else if( type == "f" ) {
                 gl.uniform1f( uniformLocation, value );
-            }
-            else if( type == "2f" )
-            {
+            } else if( type == "2f" ) {
                 gl.uniform2f( uniformLocation, value[0], value[1] );
             }
         }
@@ -246,7 +253,7 @@
 
         // Render the current image
         var shader = getShaderProgram(image);
-        var texture = getImageTexture(image); 
+        var texture = getImageTexture(image);
         var parameters = {
             "u_resolution": { type: "2f", value: [image.width, image.height] },
             "wc": { type: "f", value: enabledElement.viewport.voi.windowCenter },
@@ -255,8 +262,7 @@
             "intercept": { type: "f", value: image.intercept },
             "minPixelValue": { type: "f", value: image.minPixelValue },
             "invert": { type: "i", value: enabledElement.viewport.invert ? 1 : 0 },
-
-        }
+        };
         renderQuad(shader, parameters, texture, image.width, image.height );
 
         // Save the canvas context state and apply the viewport properties
@@ -267,7 +273,7 @@
 
     }
 
-    cornerstone.rendering.webGLRenderer = {
+    cornerstone.webGL.renderer = {
         render: render,
         initRenderer: initRenderer
     };

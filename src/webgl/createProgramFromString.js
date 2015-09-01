@@ -2,6 +2,10 @@
 
     "use strict";
 
+    if (!cornerstone.webGL) {
+        cornerstone.webGL = {};
+    }
+
     /**
      * Creates and compiles a shader.
      *
@@ -29,7 +33,7 @@
             throw "could not compile shader:" + gl.getShaderInfoLog(shader);
         }
 
-        return shader;        
+        return shader;
     }
 
     /**
@@ -60,7 +64,7 @@
         }
 
         return program;
-    };
+    }
 
     /**
      * Creates a program from 2 shaders source (Strings)
@@ -70,13 +74,11 @@
      * @return {!WebGLProgram}                 A program
      */
     function createProgramFromString(gl, vertexShaderSrc, fragShaderSrc) {
-        
         var vertexShader = compileShader(gl, vertexShaderSrc, gl.VERTEX_SHADER);
-        var fragShader= compileShader(gl, fragShaderSrc, gl.FRAGMENT_SHADER);
-
+        var fragShader = compileShader(gl, fragShaderSrc, gl.FRAGMENT_SHADER);
         return createProgram(gl, vertexShader, fragShader);
     }
 
-    cornerstone.rendering.createProgramFromString = createProgramFromString;
+    cornerstone.webGL.createProgramFromString = createProgramFromString;
 
 }(cornerstone));

@@ -138,14 +138,13 @@ if(typeof cornerstoneTestImageLoader === 'undefined'){
 
         var image = {
             imageId: imageId,
-            datatype: "uint8",
             minPixelValue : 0,
             maxPixelValue : 257,
             slope: 1.0,
             intercept: 0,
             windowCenter : 127,
             windowWidth : 256,
-            render: cs.renderGrayscaleImageWebGL,
+            render: cs.renderGrayscaleImage,
             getPixelData: getPixelData,
             rows: height,
             columns: width,
@@ -156,6 +155,13 @@ if(typeof cornerstoneTestImageLoader === 'undefined'){
             rowPixelSpacing: .8984375,
             sizeInBytes: width * height * 2
         };
+
+        if(imageId === 'example://1') {
+            $.ajax('assets/')
+
+        } else if(imageId === 'example://2') {
+
+        }
 
         var deferred = $.Deferred();
         deferred.resolve(image);
@@ -200,7 +206,7 @@ if(typeof cornerstoneTestImageLoader === 'undefined'){
             intercept : -1024,
             windowCenter : 40,
             windowWidth : 400,
-            render: cs.renderGrayscaleImageWebGL,
+            render: cs.renderGrayscaleImage,
             getPixelData: getPixelData,
             rows: height,
             columns: width,
@@ -284,11 +290,8 @@ if(typeof cornerstoneTestImageLoader === 'undefined'){
             console.log("cannot generate ramp image with bitsStored " + bitsStored);
             bitsStored = 8;
         }
-
-        var datatype;
         if(bitsStored > 8) {
             bytesPerPixel = 2;
-            datatype = "uint16";
         }
 
         var maxStoredValue = (1 << bitsStored);
@@ -317,14 +320,13 @@ if(typeof cornerstoneTestImageLoader === 'undefined'){
 
         var image = {
             imageId: imageId,
-            datatype: datatype,
             minPixelValue : 0,
             maxPixelValue : maxStoredValue -1,
             slope: slope,
             intercept: intercept,
             windowCenter : (minValue + maxValue) / 2,
             windowWidth : (maxValue - minValue),
-            render: cs.renderGrayscaleImageWebGL,
+            render: cs.renderGrayscaleImage,
             getPixelData: getPixelData,
             rows: height,
             columns: width,
@@ -386,7 +388,7 @@ if(typeof cornerstoneTestImageLoader === 'undefined'){
             intercept: 0,
             windowCenter : 127,
             windowWidth : 256,
-            render: cs.renderGrayscaleImageWebGL,
+            render: cs.renderGrayscaleImage,
             getPixelData: getPixelData,
             rows: height,
             columns: width,

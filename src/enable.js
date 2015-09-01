@@ -5,7 +5,7 @@
 
     "use strict";
 
-    function enable(element) {
+    function enable(element, renderer) {
         if(element === undefined) {
             throw "enable: parameter element cannot be undefined";
         }
@@ -13,11 +13,16 @@
         var canvas = document.createElement('canvas');
         element.appendChild(canvas);
 
+        if (typeof renderer === 'string' && renderer.toLowerCase() === 'webgl') {
+            renderer = cornerstone.webGL.renderer.render;
+        }
+
         var el = {
             element: element,
             canvas: canvas,
             image : undefined, // will be set once image is loaded
             invalid: false, // true if image needs to be drawn, false if not
+            render: renderer,
             data : {}
         };
         cornerstone.addEnabledElement(el);

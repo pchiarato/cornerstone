@@ -2,37 +2,43 @@
 
     "use strict";
 
-    if (!cornerstone.shaders) {
-        cornerstone.shaders = {};
+    if (!cornerstone.webGL) {
+        cornerstone.webGL = {};
     }
 
-    var shader = {
-    };
+    if (!cornerstone.webGL.shaders) {
+        cornerstone.webGL.shaders = {};
+    }
+
+    if (!cornerstone.webGL.dataUtilities) {
+        cornerstone.webGL.dataUtilities = {};
+    }
+
+    // For int16 pack int16 into two uint8 channels (r and a)
+    var shader = {};
 
     function storedPixelDataToImageData(image) {
-        // Transfer image data to alpha channel of WebGL texture
-        // Store data in Uint8Array
+
+        // Transfer image data to alpha and luminance channels of WebGL texture
+        // Credit to @jpambrun and @fernandojsg
+
+        // Pack int16 into two uint8 channels (r and a)
         var pixelData = image.getPixelData();
-        var data = new Uint8Array(pixelData.length);
+        var numberOfChannels = 2;
+        var data = new Uint8Array(image.width * image.height * numberOfChannels);
+        var offset = 0;
+
         for (var i = 0; i < pixelData.length; i++) {
-            data[i] = parseInt(pixelData[i], 10);
+            var val = pixelData[i];
+            data[offset++] = parseInt(val & 0xFF, 10);
+            data[offset++] = parseInt(val >> 8, 10);
         }
         return data;
     }
 
-    shader.storedPixelDataToImageData = storedPixelDataToImageData;
-
-    shader.vert = 'attribute vec2 a_position;' +
-        'attribute vec2 a_texCoord;' +
-        'uniform vec2 u_resolution;' +
-        'varying vec2 v_texCoord;' +
-        'void main() {' +
-            'vec2 zeroToOne = a_position / u_resolution;' +
-            'vec2 zeroToTwo = zeroToOne * 2.0;' +
-            'vec2 clipSpace = zeroToTwo - 1.0;' +
-            'gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);' +
-            'v_texCoord = a_texCoord;' +
-        '}';
+    cornerstone.webGL.dataUtilities.int16 = {
+        storedPixelDataToImageData: storedPixelDataToImageData
+    };
 
     shader.frag = 'precision mediump float;' +
         'uniform sampler2D u_image;' +
@@ -49,8 +55,7 @@
             'vec4 color = texture2D(u_image, v_texCoord);' +
 
             // Calculate luminance from packed texture
-            //'float intensity = color.a*256.0;'+
-            'float intensity = color.r*256.;'+
+            'float intensity = color.r*256.0 + color.a*65536.0;'+
 
             // Rescale based on slope and window settings
             'intensity = intensity * slope + intercept;'+
@@ -69,7 +74,6 @@
                 'gl_FragColor.rgb = 1.0 - gl_FragColor.rgb;' +
         '}';
 
-    cornerstone.shaders.uint8 = shader;
-
+    cornerstone.webGL.shaders.int16 = shader;
 
 }(cornerstone));

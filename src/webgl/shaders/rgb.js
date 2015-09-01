@@ -2,15 +2,22 @@
 
     "use strict";
 
-    if (!cornerstone.shaders) {
-        cornerstone.shaders = {};
+    if (!cornerstone.webGL) {
+        cornerstone.webGL = {};
+    }
+
+    if (!cornerstone.webGL.shaders) {
+        cornerstone.webGL.shaders = {};
+    }
+
+    if (!cornerstone.webGL.dataUtilities) {
+        cornerstone.webGL.dataUtilities = {};
     }
 
     // Pack RGB images into a 3-channel RGB texture
-    var shader = {
-    };
+    var shader = {};
 
-    function storedColorPixelDataToCanvasImageData(image) {
+    function storedPixelDataToImageData(image) {
         var minPixelValue = image.minPixelValue;
         var canvasImageDataIndex = 0;
         var storedPixelDataIndex = 0;
@@ -40,19 +47,9 @@
         return data;
     }
 
-    shader.storedPixelDataToImageData =storedColorPixelDataToCanvasImageData;
-
-    shader.vert = 'attribute vec2 a_position;' +
-        'attribute vec2 a_texCoord;' +
-        'uniform vec2 u_resolution;' +
-        'varying vec2 v_texCoord;' +
-        'void main() {' +
-            'vec2 zeroToOne = a_position / u_resolution;' +
-            'vec2 zeroToTwo = zeroToOne * 2.0;' +
-            'vec2 clipSpace = zeroToTwo - 1.0;' +
-            'gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);' +
-            'v_texCoord = a_texCoord;' +
-        '}';
+    cornerstone.webGL.dataUtilities.rgb = {
+        storedPixelDataToImageData: storedPixelDataToImageData
+    };
 
     shader.frag = 'precision mediump float;' +
         'uniform sampler2D u_image;' +
@@ -85,6 +82,6 @@
                 'gl_FragColor.rgb = 1. - gl_FragColor.rgb;' +
         '}';
 
-    cornerstone.shaders.rgb = shader;
+    cornerstone.webGL.shaders.rgb = shader;
 
 }(cornerstone));

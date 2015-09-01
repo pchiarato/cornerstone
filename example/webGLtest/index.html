@@ -56,8 +56,9 @@ This is a work-in-progress example of WebGL use in cornerstone
 
 <script src="../cornerstoneMath.min.js"></script>
 <script src="../cornerstoneTools.js"></script>
+<script src="../hammer.min.js"></script>
 
-<script src="../exampleImageIdLoaderWebGL.js"></script>
+<script src="../exampleImageIdLoader.js"></script>
 <script src="../cornerstoneTestImageLoader.js"></script>
 
 <script>
@@ -73,10 +74,10 @@ This is a work-in-progress example of WebGL use in cornerstone
         //var imageId= 'dicomweb:http://cornerstonetech.org/images/ClearCanvas/DXStudy/1.2.840.113619.2.67.2158294438.16324010109084338.243.dcm';
         
         // Uncomment the next line to load a uint8 greyscale image
-        // var imageId = 'example://1';
+        var imageId = 'example://1';
         
         // Uncomment the next line to load an RGB image
-        var imageId = 'https://upload.wikimedia.org/wikipedia/commons/7/7d/Renal_Cell_Carcinoma.jpg';
+        //var imageId = 'https://upload.wikimedia.org/wikipedia/commons/7/7d/Renal_Cell_Carcinoma.jpg';
         
         var element = document.getElementById('dicomImage');
 
@@ -123,22 +124,30 @@ This is a work-in-progress example of WebGL use in cornerstone
             });
         }
 
-        var element = document.getElementById('dicomImage');
-        cornerstone.enable(element);
+        cornerstone.enable(element, cornerstone.webGL.renderer.render);
+        //cornerstone.enable(element, "WebGL");
+
+        cornerstoneTools.mouseInput.enable(element);
+        cornerstoneTools.touchInput.enable(element);
+        cornerstoneTools.mouseWheelInput.enable(element);
+
         cornerstone.loadImage(imageId).then(function(image) {
             console.log(image);
 
-            cornerstone.rendering.webGLRenderer.initRenderer();
+            cornerstone.webGL.renderer.initRenderer();
 
             cornerstone.displayImage(element, image);
 
-            cornerstoneTools.mouseInput.enable(element);
-            cornerstoneTools.mouseWheelInput.enable(element);
-            
+            // Enable mouse controls
             cornerstoneTools.wwwc.activate(element, 1);
             cornerstoneTools.pan.activate(element, 2);
             cornerstoneTools.zoom.activate(element, 4);
             cornerstoneTools.zoomWheel.activate(element);
+
+            // Enable touch controls
+            cornerstoneTools.wwwcTouchDrag.activate(element);
+            cornerstoneTools.panMultiTouch.activate(element);
+            cornerstoneTools.zoomTouchPinch.activate(element);
         });
     });
 

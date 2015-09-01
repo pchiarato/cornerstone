@@ -15,7 +15,11 @@
 
         var start = new Date();
 
-        enabledElement.image.render(enabledElement, invalidated);
+        if (enabledElement.render) {
+            enabledElement.render(enabledElement, invalidated);
+        } else {
+            enabledElement.image.render(enabledElement, invalidated);
+        }
 
         var context = enabledElement.canvas.getContext('2d');
 
