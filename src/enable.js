@@ -17,6 +17,15 @@
             renderer = cornerstone.webGL.renderer.render;
         }
 
+        if (renderer === cornerstone.webGL.renderer.render) {
+            if (!cornerstone.webGL.renderer.isWebGLAvailable()) {
+                console.error('WebGL not available, falling back to Canvas renderer');
+                renderer = undefined;
+            } else {
+                cornerstone.webGL.renderer.initRenderer();
+            }
+        }
+
         var el = {
             element: element,
             canvas: canvas,

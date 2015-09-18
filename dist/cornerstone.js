@@ -175,6 +175,15 @@ if(typeof cornerstone === 'undefined'){
             renderer = cornerstone.webGL.renderer.render;
         }
 
+        if (renderer === cornerstone.webGL.renderer.render) {
+            if (!cornerstone.webGL.renderer.isWebGLAvailable()) {
+                console.error('WebGL not available, falling back to Canvas renderer');
+                renderer = undefined;
+            } else {
+                cornerstone.webGL.renderer.initRenderer();
+            }
+        }
+
         var el = {
             element: element,
             canvas: canvas,
@@ -2083,9 +2092,10 @@ if(typeof cornerstone === 'undefined'){
 
         // Check if it compiled
         var success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
-        if (!success) {
+        if (!success && !gl.isContextLost()) {
             // Something went wrong during compilation; get the error
-            throw "could not compile shader:" + gl.getShaderInfoLog(shader);
+            var infoLog = gl.getShaderInfoLog(shader);
+            console.error("Could not compile shader:\n" + infoLog);
         }
 
         return shader;
@@ -2113,9 +2123,10 @@ if(typeof cornerstone === 'undefined'){
 
         // Check if it linked.
         var success = gl.getProgramParameter(program, gl.LINK_STATUS);
-        if (!success) {
+        if (!success && !gl.isContextLost()) {
             // something went wrong with the link
-            throw ("program filed to link:" + gl.getProgramInfoLog (program));
+            var infoLog = gl.getProgramInfoLog(program);
+            console.error("WebGL program filed to link:\n" + infoLog);
         }
 
         return program;
@@ -2156,11 +2167,13 @@ if(typeof cornerstone === 'undefined'){
     var texturesCache = {};
     cornerstone.webGL.isWebGLInitialized = false;
 
+    function getRenderCanvas() {
+        return renderCanvas;
+    }
+
     function initShaders() {
-
         for (var id in cornerstone.webGL.shaders) {
-
-            console.log("WEBGL: Loading shader",id);
+            console.log("WEBGL: Loading shader", id);
             var shader = cornerstone.webGL.shaders[ id ];
             shader.attributes = {};
             shader.uniforms = {};
@@ -2180,24 +2193,36 @@ if(typeof cornerstone === 'undefined'){
 
     function initRenderer() {
         if (cornerstone.webGL.isWebGLInitialized === true) {
-            console.log("WEBGL Renderer already initialized", gl);
+            console.log("WEBGL Renderer already initialized");
             return;
         }
         if ( initWebGL( renderCanvas ) ) {
             initBuffers();
             initShaders();
-            console.log("WEBGL Renderer initialized!", gl);
+            console.log("WEBGL Renderer initialized!");
             cornerstone.webGL.isWebGLInitialized = true;
         }
     }
 
     function updateRectangle(gl, width, height) {
-
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
             width, height,
             0, height,
             width, 0,
             0, 0]), gl.STATIC_DRAW);
+    }
+
+    function handleLostContext(event) {
+        event.preventDefault();
+        console.warn('WebGL Context Lost!');
+    }
+
+    function handleRestoredContext(event) {
+        event.preventDefault();
+        cornerstone.webGL.isWebGLInitialized = false;
+        texturesCache = {};
+        initRenderer();
+        console.log('WebGL Context Restored.');
     }
 
     function initWebGL(canvas) {
@@ -2207,16 +2232,30 @@ if(typeof cornerstone === 'undefined'){
             // Try to grab the standard context. If it fails, fallback to experimental.
             var options = {
                 preserveDrawingBuffer: true, // preserve buffer so we can copy to display canvas element
-                failIfMajorPerformanceCaveat: true
             };
+
+            // ---------------- Testing purposes ------------- 
+            if (cornerstone.webGL.debug === true && WebGLDebugUtils) {
+                renderCanvas = WebGLDebugUtils.makeLostContextSimulatingCanvas(renderCanvas);
+            }
+            // ---------------- Testing purposes -------------
+
             gl = canvas.getContext("webgl", options) || canvas.getContext("experimental-webgl", options);
+
+            // Set up event listeners for context lost / context restored
+            canvas.removeEventListener("webglcontextlost", handleLostContext, false);
+            canvas.addEventListener("webglcontextlost", handleLostContext, false);
+
+            canvas.removeEventListener("webglcontextrestored", handleRestoredContext, false);
+            canvas.addEventListener("webglcontextrestored", handleRestoredContext, false);
+
         } catch(error) {
             throw "Error creating WebGL context";
         }
 
         // If we don't have a GL context, give up now
         if (!gl) {
-            alert("Unable to initialize WebGL. Your browser may not support it.");
+            console.error("Unable to initialize WebGL. Your browser may not support it.");
             gl = null;
         }
         return gl;
@@ -2413,9 +2452,29 @@ if(typeof cornerstone === 'undefined'){
 
     }
 
+    function isWebGLAvailable() {
+        // Adapted from
+        // http://stackoverflow.com/questions/9899807/three-js-detect-webgl-support-and-fallback-to-regular-canvas
+        
+        var options = {
+            failIfMajorPerformanceCaveat: true
+        };
+
+        try {
+            var canvas = document.createElement("canvas");
+            return !!
+                window.WebGLRenderingContext &&
+                (canvas.getContext("webgl", options) || canvas.getContext("experimental-webgl", options));
+        } catch(e) {
+            return false;
+        }
+    }
+
     cornerstone.webGL.renderer = {
         render: render,
-        initRenderer: initRenderer
+        initRenderer: initRenderer,
+        getRenderCanvas: getRenderCanvas,
+        isWebGLAvailable: isWebGLAvailable
     };
 
 }(cornerstone));

@@ -28,9 +28,10 @@
 
         // Check if it compiled
         var success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
-        if (!success) {
+        if (!success && !gl.isContextLost()) {
             // Something went wrong during compilation; get the error
-            throw "could not compile shader:" + gl.getShaderInfoLog(shader);
+            var infoLog = gl.getShaderInfoLog(shader);
+            console.error("Could not compile shader:\n" + infoLog);
         }
 
         return shader;
@@ -58,9 +59,10 @@
 
         // Check if it linked.
         var success = gl.getProgramParameter(program, gl.LINK_STATUS);
-        if (!success) {
+        if (!success && !gl.isContextLost()) {
             // something went wrong with the link
-            throw ("program filed to link:" + gl.getProgramInfoLog (program));
+            var infoLog = gl.getProgramInfoLog(program);
+            console.error("WebGL program filed to link:\n" + infoLog);
         }
 
         return program;
