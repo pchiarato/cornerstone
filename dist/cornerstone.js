@@ -1779,30 +1779,6 @@ if(typeof cornerstone === 'undefined'){
 }(cornerstone));
 
 /**
- * This module is responsible for drawing a grayscale image
- */
-
-(function (cornerstone) {
-
-    "use strict";
-
-    /**
-     * API function to draw a grayscale image to a given enabledElement
-     * @param enabledElement
-     * @param invalidated - true if pixel data has been invalidated and cached rendering should not be used
-     */
-    function renderGrayscaleImageWebGL(enabledElement, invalidated) {
-        cornerstone.rendering.webGLRenderer.render(enabledElement);
-
-    }
-
-    // Module exports
-    cornerstone.rendering.grayscaleImageWebGL = renderGrayscaleImageWebGL;
-    cornerstone.renderGrayscaleImageWebGL = renderGrayscaleImageWebGL;
-
-}(cornerstone));
-
-/**
  * This module is responsible for drawing an image to an enabled elements canvas element
  */
 
@@ -2606,7 +2582,6 @@ if(typeof cornerstone === 'undefined'){
             'vec4 color = texture2D(u_image, v_texCoord);' +
 
             // Calculate luminance from packed texture
-            //'float intensity = color.a*256.0;'+
             'float intensity = color.r*256.;'+
 
             // Rescale based on slope and window settings

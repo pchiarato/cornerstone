@@ -46,7 +46,6 @@
             'vec4 color = texture2D(u_image, v_texCoord);' +
 
             // Calculate luminance from packed texture
-            //'float intensity = color.a*256.0;'+
             'float intensity = color.r*256.;'+
 
             // Rescale based on slope and window settings
