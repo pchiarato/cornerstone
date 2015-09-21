@@ -10,7 +10,7 @@
 
     var cachedImages = [];
 
-    var maximumSizeInBytes = 1024 * 1024 * 1024; // 1 GB
+    var maximumSizeInBytes = 1024 * 1024 * 256; // 256 MB
     var cacheSizeInBytes = 0;
 
     function setMaximumSizeBytes(numBytes) {
@@ -80,19 +80,18 @@
             imageId : imageId,
             imageTexture : imageTexture,
             timeStamp : new Date(),
-            sizeInBytes: 0
+            sizeInBytes: imageTexture.sizeInBytes
         };
 
         imageCache[imageId] = cachedImage;
         cachedImages.push(cachedImage);
 
-        if (image.sizeInBytes === undefined) {
-            throw "putImageTexture: image does not have sizeInBytes property or";
+        if (imageTexture.sizeInBytes === undefined) {
+            throw "putImageTexture: imageTexture does not have sizeInBytes property or";
         }
-        if (image.sizeInBytes.toFixed === undefined) {
-            throw "putImageTexture: image.sizeInBytes is not a number";
+        if (imageTexture.sizeInBytes.toFixed === undefined) {
+            throw "putImageTexture: imageTexture.sizeInBytes is not a number";
         }
-        cachedImage.sizeInBytes = image.sizeInBytes;
         cacheSizeInBytes += cachedImage.sizeInBytes;
         purgeCacheIfNecessary();
     }

@@ -2195,7 +2195,7 @@ if(typeof cornerstone === 'undefined'){
     function handleRestoredContext(event) {
         event.preventDefault();
         cornerstone.webGL.isWebGLInitialized = false;
-        cornerstone.webGL.textureCache.purgeCache()
+        cornerstone.webGL.textureCache.purgeCache();
         initRenderer();
         console.log('WebGL Context Restored.');
     }
@@ -2264,23 +2264,27 @@ if(typeof cornerstone === 'undefined'){
     }
 
     function getImageTexture( image ) {
-        
-        var texture = cornerstone.webGL.textureCache.getImageTexture(image.imageId);
-        if (!texture) {
+        var imageTexture = cornerstone.webGL.textureCache.getImageTexture(image.imageId);
+        if (!imageTexture) {
             console.log("Generating texture for imageid: ", image.imageId);
-            texture = generateTexture(image);
-            cornerstone.webGL.textureCache.putImageTexture(image, texture);
+            imageTexture = generateTexture(image);
+            cornerstone.webGL.textureCache.putImageTexture(image, imageTexture);
         }
-        return texture;
+        return imageTexture.texture;
 
     }
 
     function generateTexture( image ) {
-        
         var TEXTURE_FORMAT = {
-            "rgb": gl.RGB,
-            "int8": gl.LUMINANCE,
-            "int16": gl.LUMINANCE_ALPHA
+            int8: gl.LUMINANCE,
+            int16: gl.LUMINANCE_ALPHA,
+            rgb: gl.RGB
+        };
+
+        var TEXTURE_BYTES = {
+            int8: 1, // Luminance
+            int16: 2, // Luminance + Alpha
+            rgb: 3 // RGB
         };
 
         var imageDataType = getImageDataType(image);
@@ -2301,7 +2305,13 @@ if(typeof cornerstone === 'undefined'){
 
         gl.texImage2D(gl.TEXTURE_2D, 0, format, image.width, image.height, 0, format, gl.UNSIGNED_BYTE, imageData);
 
-        return texture;
+        // Calculate the size in bytes of this image in memory
+        var sizeInBytes = image.width * image.height * TEXTURE_BYTES[imageDataType];
+        var imageTexture = {
+            texture: texture,
+            sizeInBytes: sizeInBytes
+        };
+        return imageTexture;
 
     }
 
@@ -2704,7 +2714,7 @@ if(typeof cornerstone === 'undefined'){
 
     var cachedImages = [];
 
-    var maximumSizeInBytes = 1024 * 1024 * 1024; // 1 GB
+    var maximumSizeInBytes = 1024 * 1024 * 256; // 256 MB
     var cacheSizeInBytes = 0;
 
     function setMaximumSizeBytes(numBytes) {
@@ -2774,19 +2784,18 @@ if(typeof cornerstone === 'undefined'){
             imageId : imageId,
             imageTexture : imageTexture,
             timeStamp : new Date(),
-            sizeInBytes: 0
+            sizeInBytes: imageTexture.sizeInBytes
         };
 
         imageCache[imageId] = cachedImage;
         cachedImages.push(cachedImage);
 
-        if (image.sizeInBytes === undefined) {
-            throw "putImageTexture: image does not have sizeInBytes property or";
+        if (imageTexture.sizeInBytes === undefined) {
+            throw "putImageTexture: imageTexture does not have sizeInBytes property or";
         }
-        if (image.sizeInBytes.toFixed === undefined) {
-            throw "putImageTexture: image.sizeInBytes is not a number";
+        if (imageTexture.sizeInBytes.toFixed === undefined) {
+            throw "putImageTexture: imageTexture.sizeInBytes is not a number";
         }
-        cachedImage.sizeInBytes = image.sizeInBytes;
         cacheSizeInBytes += cachedImage.sizeInBytes;
         purgeCacheIfNecessary();
     }
