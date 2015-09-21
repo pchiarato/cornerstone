@@ -3,6 +3,11 @@
 <head>
     <!-- twitter bootstrap CSS stylesheet - not required by cornerstone -->
     <link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        #cacheInfo {
+            word-wrap: break-word;
+        }
+    </style>
 </head>
 <body>
 <div class="container">
@@ -26,6 +31,8 @@ This is a work-in-progress example of WebGL use in cornerstone
         </ul>
         <label for="invert">Invert <input id="invert" type="checkbox"></input></label>
         <a id="loseContext" class="btn btn-danger">Lose Context</a>
+        <a id="addToCache" class="btn btn-primary">Add to cache</a>
+        <p id="cacheInfo"></p>
     </div>
     <div class="col-xs-6">
         <div style="width:512px;height:512px;position:relative;display:inline-block;color:white;"
@@ -119,10 +126,25 @@ This is a work-in-progress example of WebGL use in cornerstone
             cornerstone.setViewport(element, viewport);
         })
 
-        $("#loseContext").on('click', function() {
+        $("#loseContext").on('click', function(e) {
+            e.preventDefault();
             var canvas = cornerstone.webGL.renderer.getRenderCanvas();
             canvas.loseContext();
         })
+
+        $("#addToCache").on('click', function(e) {
+            e.preventDefault();
+            var num = Math.ceil(Math.random() * 1000)
+            rampImageId = "ramp://"+1000+","+num +"," + 16;
+            console.log(rampImageId);
+            loadImage(rampImageId);
+            var cacheInfo = cornerstone.webGL.textureCache.getCacheInfo();
+            console.log(cacheInfo);
+            $("#cacheInfo").text(JSON.stringify(cacheInfo));
+        })
+
+        // Useful for testing textureCache.
+        // cornerstone.webGL.textureCache.setMaximumSizeBytes(10000000);
 
         function loadImage(imageId) {
             cornerstone.loadImage(imageId).then(function(image) {

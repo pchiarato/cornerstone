@@ -13,7 +13,6 @@
     var programs;
     var shader;
     var texCoordBuffer, positionBuffer;
-    var texturesCache = {};
     cornerstone.webGL.isWebGLInitialized = false;
 
     function getRenderCanvas() {
@@ -69,7 +68,7 @@
     function handleRestoredContext(event) {
         event.preventDefault();
         cornerstone.webGL.isWebGLInitialized = false;
-        texturesCache = {};
+        cornerstone.webGL.textureCache.purgeCache()
         initRenderer();
         console.log('WebGL Context Restored.');
     }
@@ -139,13 +138,13 @@
 
     function getImageTexture( image ) {
         
-        //@todo cache?
-        if ( !texturesCache[ image.imageId ] ) {
-            texturesCache[ image.imageId ] = generateTexture( image );
+        var texture = cornerstone.webGL.textureCache.getImageTexture(image.imageId);
+        if (!texture) {
             console.log("Generating texture for imageid: ", image.imageId);
+            texture = generateTexture(image);
+            cornerstone.webGL.textureCache.putImageTexture(image, texture);
         }
-        //gl.bindTexture(gl.TEXTURE_2D, texturesCache[ image.imageId ]);
-        return texturesCache[ image.imageId ];
+        return texture;
 
     }
 
