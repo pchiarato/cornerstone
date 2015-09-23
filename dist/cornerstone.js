@@ -1,4 +1,4 @@
-/*! cornerstone - v0.8.4 - 2015-09-21 | (c) 2014 Chris Hafey | https://github.com/chafey/cornerstone */
+/*! cornerstone - v0.8.4 - 2015-09-23 | (c) 2014 Chris Hafey | https://github.com/chafey/cornerstone */
 if(typeof cornerstone === 'undefined'){
     cornerstone = {
         internal : {},
@@ -2294,7 +2294,6 @@ if(typeof cornerstone === 'undefined'){
         var texture = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, texture);
         
-        //gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -2346,11 +2345,9 @@ if(typeof cornerstone === 'undefined'){
         gl.useProgram(shader.program);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-        gl.enableVertexAttribArray(shader.attributes.texCoordLocation);
         gl.vertexAttribPointer(shader.attributes.texCoordLocation, 2, gl.FLOAT, false, 0, 0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-        gl.enableVertexAttribArray(shader.attributes.positionLocation);
         gl.vertexAttribPointer(shader.attributes.positionLocation, 2, gl.FLOAT, false, 0, 0);
 
         for (var key in parameters) {
@@ -2494,9 +2491,12 @@ if(typeof cornerstone === 'undefined'){
         var numberOfChannels = 2;
         var data = new Uint8Array(image.width * image.height * numberOfChannels);
         var offset = 0;
+        var minPixelValue = 0;
+        if (image.minPixelValue < 0)
+            minPixelValue = -image.minPixelValue;
 
         for (var i = 0; i < pixelData.length; i++) {
-            var val = pixelData[i];
+            var val = pixelData[i] + minPixelValue;
             data[offset++] = parseInt(val & 0xFF, 10);
             data[offset++] = parseInt(val >> 8, 10);
         }
@@ -2522,12 +2522,12 @@ if(typeof cornerstone === 'undefined'){
             'vec4 color = texture2D(u_image, v_texCoord);' +
 
             // Calculate luminance from packed texture
-            'float intensity = color.r*256.0 + color.a*65536.0;'+
+            'float intensity = color.r*256.0 + color.a*65536.0 - max(minPixelValue, 0.0);'+
 
             // Rescale based on slope and window settings
             'intensity = intensity * slope + intercept;'+
             'float center0 = wc - 0.5 - minPixelValue;'+
-            'float width0 = ww - 1.0;'+
+            'float width0 = max(ww, 1.0);' +
             'intensity = (intensity - center0) / width0 + 0.5;'+
 
             // Clamp intensity
@@ -2597,7 +2597,7 @@ if(typeof cornerstone === 'undefined'){
             // Rescale based on slope and window settings
             'intensity = intensity * slope + intercept;'+
             'float center0 = wc - 0.5 - minPixelValue;'+
-            'float width0 = ww - 1.0;'+
+            'float width0 = max(ww, 1.0);' +
             'intensity = (intensity - center0) / width0 + 0.5;'+
 
             // Clamp intensity

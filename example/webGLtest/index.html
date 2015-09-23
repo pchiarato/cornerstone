@@ -45,6 +45,16 @@ This is a work-in-progress example of WebGL use in cornerstone
                  style="width:512px;height:512px;top:0px;left:0px; position:absolute;">
             </div>
         </div>
+        <div style="width:512px;height:512px;position:relative;display:inline-block;color:white;"
+             oncontextmenu="return false"
+             class='cornerstone-enabled-image'
+             unselectable='on'
+             onselectstart='return false;'
+             onmousedown='return false;'>
+            <div id="dicomImage2"
+                 style="width:512px;height:512px;top:0px;left:0px; position:absolute;">
+            </div>
+        </div>
     </div>
 </div>
 
@@ -85,6 +95,8 @@ This is a work-in-progress example of WebGL use in cornerstone
         
         // Uncomment the next line to load a uint8 greyscale image
         var imageId = 'example://1';
+
+        var imageId2 = 'example://2';
         
         // Uncomment the next line to load an RGB image
         //var imageId = 'https://upload.wikimedia.org/wikipedia/commons/7/7d/Renal_Cell_Carcinoma.jpg';
@@ -162,6 +174,14 @@ This is a work-in-progress example of WebGL use in cornerstone
         cornerstoneTools.touchInput.enable(element);
         cornerstoneTools.mouseWheelInput.enable(element);
 
+        var element2 = document.getElementById('dicomImage2');
+        cornerstone.enable(element2, cornerstone.webGL.renderer.render);
+        //cornerstone.enable(element, "WebGL");
+
+        cornerstoneTools.mouseInput.enable(element2);
+        cornerstoneTools.touchInput.enable(element2);
+        cornerstoneTools.mouseWheelInput.enable(element2);
+
         cornerstone.loadImage(imageId).then(function(image) {
             console.log(image);
 
@@ -177,6 +197,23 @@ This is a work-in-progress example of WebGL use in cornerstone
             cornerstoneTools.wwwcTouchDrag.activate(element);
             cornerstoneTools.panMultiTouch.activate(element);
             cornerstoneTools.zoomTouchPinch.activate(element);
+        });
+
+        cornerstone.loadImage(imageId2).then(function(image) {
+            console.log(image);
+
+            cornerstone.displayImage(element2, image);
+
+            // Enable mouse controls
+            cornerstoneTools.wwwc.activate(element2, 1);
+            cornerstoneTools.pan.activate(element2, 2);
+            cornerstoneTools.zoom.activate(element2, 4);
+            cornerstoneTools.zoomWheel.activate(element2);
+
+            // Enable touch controls
+            cornerstoneTools.wwwcTouchDrag.activate(element2);
+            cornerstoneTools.panMultiTouch.activate(element2);
+            cornerstoneTools.zoomTouchPinch.activate(element2);
         });
     });
 

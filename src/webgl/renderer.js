@@ -167,7 +167,6 @@
         var texture = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, texture);
         
-        //gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -219,11 +218,9 @@
         gl.useProgram(shader.program);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-        gl.enableVertexAttribArray(shader.attributes.texCoordLocation);
         gl.vertexAttribPointer(shader.attributes.texCoordLocation, 2, gl.FLOAT, false, 0, 0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-        gl.enableVertexAttribArray(shader.attributes.positionLocation);
         gl.vertexAttribPointer(shader.attributes.positionLocation, 2, gl.FLOAT, false, 0, 0);
 
         for (var key in parameters) {
