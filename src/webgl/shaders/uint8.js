@@ -18,20 +18,16 @@
 
     function storedPixelDataToImageData(image) {
         // Transfer image data to alpha channel of WebGL texture
-        // Store data in Uint8Array
+        // Store data in Uuint8Array
         var pixelData = image.getPixelData();
-        var numberOfChannels = 2;
-        var data = new Uint8Array(image.width * image.height * numberOfChannels);
-        var offset = 0;
-
+        var data = new Uint8Array(pixelData.length);
         for (var i = 0; i < pixelData.length; i++) {
-            data[offset++] = parseInt(pixelData[i], 10);
-            data[offset++] = pixelData[i] < 0 ? 0: 1; // 0 For negative, 1 for positive
+            data[i] = parseInt(pixelData[i], 10);
         }
         return data;
     }
 
-    cornerstone.webGL.dataUtilities.int8 = {
+    cornerstone.webGL.dataUtilities.uint8 = {
         storedPixelDataToImageData: storedPixelDataToImageData
     };
 
@@ -41,7 +37,7 @@
         'uniform float wc;' +
         'uniform float slope;' +
         'uniform float intercept;' +
-        'uniform float minPixelValue;' +
+        //'uniform float minPixelValue;' +
         'uniform int invert;' +
         'varying vec2 v_texCoord;' +
         
@@ -50,10 +46,7 @@
             'vec4 color = texture2D(u_image, v_texCoord);' +
 
             // Calculate luminance from packed texture
-            'float intensity = color.r*256.;'+
-
-            'if (color.a == 0.0)' +
-                'intensity = -intensity;' +
+            'float intensity = color.r*256.0;'+
 
             // Rescale based on slope and window settings
             'intensity = intensity * slope + intercept;'+
@@ -72,7 +65,7 @@
                 'gl_FragColor.rgb = 1.0 - gl_FragColor.rgb;' +
         '}';
 
-    cornerstone.webGL.shaders.int8 = shader;
+    cornerstone.webGL.shaders.uint8 = shader;
 
 
 }(cornerstone));

@@ -114,11 +114,16 @@
             return 'rgb';
         }
 
-        if (!image.datatype) {
-            return 'int16';
+        var datatype = 'int';
+        if (image.minPixelValue >= 0) {
+            datatype = 'u' + datatype;
         }
-        var datatype = image.datatype;
-        datatype = datatype.replace('uint', 'int');
+
+        if (image.maxPixelValue > 255) {
+            datatype += '16';
+        } else {
+            datatype += '8';
+        }
         return datatype;
     }
 
@@ -139,7 +144,7 @@
     function getImageTexture( image ) {
         var imageTexture = cornerstone.webGL.textureCache.getImageTexture(image.imageId);
         if (!imageTexture) {
-            console.log("Generating texture for imageid: ", image.imageId);
+            //console.log("Generating texture for imageid: ", image.imageId);
             imageTexture = generateTexture(image);
             cornerstone.webGL.textureCache.putImageTexture(image, imageTexture);
         }
@@ -149,14 +154,17 @@
 
     function generateTexture( image ) {
         var TEXTURE_FORMAT = {
-            int8: gl.LUMINANCE,
-            int16: gl.LUMINANCE_ALPHA,
+            uint8: gl.LUMINANCE,
+            int8: gl.LUMINANCE_ALPHA,
+            uint16: gl.LUMINANCE_ALPHA,
+            int16: gl.RGB,
             rgb: gl.RGB
         };
 
         var TEXTURE_BYTES = {
             int8: 1, // Luminance
-            int16: 2, // Luminance + Alpha
+            uint16: 2, // Luminance + Alpha
+            int16: 3, // RGB
             rgb: 3 // RGB
         };
 
@@ -294,7 +302,7 @@
             "ww": { type: "f", value: enabledElement.viewport.voi.windowWidth },
             "slope": { type: "f", value: image.slope },
             "intercept": { type: "f", value: image.intercept },
-            "minPixelValue": { type: "f", value: image.minPixelValue },
+            //"minPixelValue": { type: "f", value: image.minPixelValue },
             "invert": { type: "i", value: enabledElement.viewport.invert ? 1 : 0 },
         };
         renderQuad(shader, parameters, texture, image.width, image.height );
