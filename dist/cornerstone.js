@@ -101,8 +101,64 @@ if(typeof cornerstone === 'undefined'){
         cornerstone.drawImage(enabledElement);
     }
 
+    /*
+        Display statically and image into an existing canvas.
+        Statically means 
+            - we keep nothing on memory (no cache, no enabled element etc...)
+            - we won't apply any changes on the image
+
+        @param canvas
+        @param image
+        @param type  'adjustWidth', 'adjustHeight', 'fit' or undefined
+            fit and undefined will do same things if no viewport is specified.
+            If a viewport is set, fit will override viewport.scale to be sure it fits.
+        @param viewport 
+     */
+    function displayStaticImage(canvas, image, type, viewport){
+        if(canvas === undefined || image === undefined) {
+            throw "displayStaticImage: parameters 'canvas' and 'image' cannot be undefined";
+        }
+
+        if(type == 'adjustWidth')
+            canvas.width = canvas.height * image.width / image.height;
+        else if(type == 'adjustHeight')
+            canvas.height = canvas.width * image.height / image.width;
+
+        var vp = cornerstone.internal.getDefaultViewport(canvas, image);
+        if( viewport )
+            $.extend(vp, viewport);
+      
+        if(type == 'fit' && viewport)
+            vp.scale = cornerstone.internal.scaleToFit( canvas.width, canvas.height, image.width, image.height );
+
+        cornerstone.internal.drawImage({
+            canvas : canvas,
+            viewport : vp,
+            image: image
+        });
+    }
+
+    /*
+        return an <image> element
+     */
+    function getImageElement(srcImage, width, height, type, viewport){
+        var canvas = document.createElement('canvas');
+        canvas.width = width || srcImage.width;
+        canvas.height = height || srcImage.height;
+
+        displayStaticImage( canvas, srcImage, type, viewport);
+
+        var img = document.createElement('img');
+        img.src = canvas.toDataURL();
+
+        return img;
+    }
+
     // module/private exports
     cornerstone.displayImage = displayImage;
+    cornerstone.displayStaticImage = displayStaticImage;
+    cornerstone.getImageElement = getImageElement;
+
 }($, cornerstone));
 /**
  * This module is responsible for immediately drawing an enabled element
@@ -283,6 +339,10 @@ if(typeof cornerstone === 'undefined'){
       }
     }
 
+    function scaleToFit(elWidth, elHeight, imgWidth, imgHeight){
+        return Math.min(elWidth / imgWidth, elHeight / imgHeight);
+    }
+
     /**
      * Adjusts an images scale and center so the image is centered and completely visible
      * @param element
@@ -292,21 +352,15 @@ if(typeof cornerstone === 'undefined'){
         var enabledElement = cornerstone.getEnabledElement(element);
         var imageSize = getImageSize(enabledElement);
 
-        var verticalScale = enabledElement.canvas.height / imageSize.height;
-        var horizontalScale= enabledElement.canvas.width / imageSize.width;
-        if(horizontalScale < verticalScale) {
-          enabledElement.viewport.scale = horizontalScale;
-        }
-        else
-        {
-          enabledElement.viewport.scale = verticalScale;
-        }
+        enabledElement.viewport.scale = scaleToFit(enabledElement.canvas.width, enabledElement.canvas.height, imageSize.width, imageSize.height);
+        
         enabledElement.viewport.translation.x = 0;
         enabledElement.viewport.translation.y = 0;
         cornerstone.updateImage(element);
     }
 
     cornerstone.fitToWindow = fitToWindow;
+    cornerstone.internal.scaleToFit = scaleToFit;
 }(cornerstone));
 
 /**
@@ -1036,15 +1090,9 @@ if(typeof cornerstone === 'undefined'){
             voiLUT: image.voiLUT
         };
 
-        // fit image to window
-        var verticalScale = canvas.height / image.rows;
-        var horizontalScale= canvas.width / image.columns;
-        if(horizontalScale < verticalScale) {
-            viewport.scale = horizontalScale;
-        }
-        else {
-            viewport.scale = verticalScale;
-        }
+        // fit image to window   
+        viewport.scale = cornerstone.internal.scaleToFit( canvas.width, canvas.height, image.columns, image.rows );
+        
         return viewport;
     }
 
