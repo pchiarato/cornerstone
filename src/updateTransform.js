@@ -1,4 +1,4 @@
-(function (cornerstone) {
+(function ($, cornerstone) {
 
     "use strict";
 
@@ -34,24 +34,18 @@
             transform += 'rotateX(180deg)';
 
         //scale
-        var widthScale = enabledElement.viewport.scale;
-        var heightScale = enabledElement.viewport.scale;
-        if(enabledElement.image.rowPixelSpacing < enabledElement.image.columnPixelSpacing)
-            widthScale = widthScale * (enabledElement.image.columnPixelSpacing / enabledElement.image.rowPixelSpacing);
-        else if(enabledElement.image.columnPixelSpacing < enabledElement.image.rowPixelSpacing)
-            heightScale = heightScale * (enabledElement.image.rowPixelSpacing / enabledElement.image.columnPixelSpacing);
-    
-        transform.scale(widthScale, heightScale);
+        var img = enabledElement.image,
+            widthScale = enabledElement.viewport.scale,
+            heightScale = enabledElement.viewport.scale;
+
+        if(img){
+            if(img.rowPixelSpacing < img.columnPixelSpacing)
+                widthScale = widthScale * (img.columnPixelSpacing / img.rowPixelSpacing);
+            else if(img.columnPixelSpacing < img.rowPixelSpacing)
+                heightScale = heightScale * (img.rowPixelSpacing / img.columnPixelSpacing);
+        }
 
         transform += 'scale(' + widthScale + ',' + heightScale +')';
-
-        /* flip with scale()
-        transform += 'scale('+ 
-            (viewport.hflip? -1 : 1)*viewport.scale + //x
-            ',' + 
-            (viewport.vflip? -1 : 1)*viewport.scale + //y
-            ')';
-        */
 
         enabledElement.renderer.style.transform = transform;
 
@@ -68,4 +62,4 @@
     cornerstone.updateTransform = updateTransform;
     cornerstone.internal.applyTransform = applyTransform;
 
-}(cornerstone));
+}($, cornerstone));

@@ -1,7 +1,8 @@
 /**
  * This module contains a function to immediately redraw an image
  */
-(function (cornerstone) {
+/* global jQuery, cornerstone */
+(function ($, cornerstone) {
 
     "use strict";
 
@@ -10,7 +11,7 @@
         loopRunning = false;
 
     function renderingLoop(){
-        var id = pool.pop(),
+        var id = pool.shift(),
             el = pendingEls[id];
 
         delete pendingEls[id];
@@ -38,6 +39,7 @@
 
         var id = enabledElement.id,
             pendingElement = pendingEls[id];
+
         //if this element is not yet on the pool add it
         //otherwise do nothing cause it means we're asking for an update before the previous one had time to complete
         if( !pendingElement ){
@@ -65,4 +67,4 @@
     // module exports
     cornerstone.updateImage = updateImage;
 
-}(cornerstone));
+}(jQuery, cornerstone));

@@ -122,11 +122,46 @@
         if( viewport )
             $.extend(vp, viewport);
 
+         //render the image entierely
+        var renderCanvas = document.createElement('canvas');
+        renderCanvas.width = imgWidth;
+        renderCanvas.height = imgHeight;       
+
+        //only lut/windowing par of vp is of need here
+        //transform properties are used below
         cornerstone.internal.drawImage({
-            canvas : canvas,
+            canvas : renderCanvas,
             viewport : vp,
             image: image
         });
+
+        //draw
+        
+        // compute scale
+        var widthScale = vp.scale,
+            heightScale = vp.scale;
+        if(image.rowPixelSpacing < image.columnPixelSpacing)
+            widthScale = widthScale * (image.columnPixelSpacing / image.rowPixelSpacing);
+        else if(image.columnPixelSpacing < image.rowPixelSpacing)
+            heightScale = heightScale * (image.rowPixelSpacing / image.columnPixelSpacing);
+
+        if(vp.hflip)
+            widthScale = -widthScale;
+        if(vp.vflip)
+            heightScale = -heightScale;
+
+        var context = canvas.getContext('2d');
+
+        context.translate(width/2 + vp.translation.x, height / 2 + vp.translation.y);
+        context.rotate(vp.rotation*Math.PI/180);
+        context.scale(widthScale, heightScale);
+        context.translate(-imgWidth / 2 , -imgHeight/ 2);
+
+        //renderCanvas must be drawn on a white background
+        context.fillStyle = '#fff';
+        context.fillRect( 0, 0, imgWidth, imgHeight);
+
+        context.drawImage(renderCanvas, 0, 0, imgWidth, imgHeight);
 
         return canvas;
     }

@@ -9,34 +9,29 @@
 
     /**
      * Creates a new viewport object containing default values for the image and canvas
-     * @param canvas
+     * @param element
      * @param image
      * @returns viewport object
      */
-    function getDefaultViewport(enabledElement, image) {
-        if(enabledElement === undefined) {
-            throw "getDefaultViewport: parameter enabledElement must not be undefined";
+    function getDefaultViewport(element, image) {
+        if(element === undefined) {
+            throw "getDefaultViewport: parameter element must not be undefined";
         }
         if(image === undefined) {
             throw "getDefaultViewport: parameter image must not be undefined";
         }
 
-        //quick and temporary hack for displayStaticImage() where we have no element
-        var scale;
-        if(!enabledElement){
-            scale = 1;
-        }
-        else{
-            var elemStyle =      window.getComputedStyle(enabledElement.element);
+        //quick and temporary hack for displayStaticImage() where we element is an untached canvas
+        var elementSize = element.parentNode ?
+                    element.getComputedStyle()
+                :   
+                    {
+                        width: element.width,
+                        height: element.height
+                    };
 
-            var elWidth = parseInt(elemStyle.width);
-            var elHeight =  parseInt(elemStyle.height);
-
-            scale = scaleToFit(elWidth, elHeight, image.width, image.height);
-        }
-
-        var viewport = {
-            scale : scale,
+        return {
+            scale : scaleToFit(elementSize.width, elementSize.height, image.width, image.height),
             translation : {
                 x : 0,
                 y : 0
@@ -53,8 +48,6 @@
             modalityLUT: image.modalityLUT,
             voiLUT: image.voiLUT
         };
-
-        return viewport;
     }
 
     function scaleToFit(elWidth, elHeight, imgWidth, imgHeight){
