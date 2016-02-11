@@ -13,15 +13,30 @@
      * @param image
      * @returns viewport object
      */
-    function getDefaultViewport(canvas, image) {
-        if(canvas === undefined) {
-            throw "getDefaultViewport: parameter canvas must not be undefined";
+    function getDefaultViewport(enabledElement, image) {
+        if(enabledElement === undefined) {
+            throw "getDefaultViewport: parameter enabledElement must not be undefined";
         }
         if(image === undefined) {
             throw "getDefaultViewport: parameter image must not be undefined";
         }
+
+        //quick and temporary hack for displayStaticImage() where we have no element
+        var scale;
+        if(!enabledElement){
+            scale = 1;
+        }
+        else{
+            var elemStyle =      window.getComputedStyle(enabledElement.element);
+
+            var elWidth = parseInt(elemStyle.width);
+            var elHeight =  parseInt(elemStyle.height);
+
+            scale = scaleToFit(elWidth, elHeight, image.width, image.height);
+        }
+
         var viewport = {
-            scale : 1.0,
+            scale : scale,
             translation : {
                 x : 0,
                 y : 0
@@ -39,13 +54,16 @@
             voiLUT: image.voiLUT
         };
 
-        // fit image to window   
-        viewport.scale = cornerstone.internal.scaleToFit( canvas.width, canvas.height, image.columns, image.rows );
-        
         return viewport;
+    }
+
+    function scaleToFit(elWidth, elHeight, imgWidth, imgHeight){
+        return Math.min(elWidth / imgWidth, elHeight / imgHeight);
     }
 
     // module/private exports
     cornerstone.internal.getDefaultViewport = getDefaultViewport;
     cornerstone.getDefaultViewport = getDefaultViewport;
+
+    cornerstone.internal.scaleToFit = scaleToFit;
 }(cornerstone));
