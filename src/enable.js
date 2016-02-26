@@ -12,18 +12,12 @@
             throw "enable: parameter element cannot be undefined";
         }
         
-        var renderer = document.createElement('div'); 
-        renderer.className = 'cornerstone-renderer';
-
-        var canvas = document.createElement('canvas');       
-    
-        renderer.appendChild(canvas);
-        element.appendChild(renderer);
+        var canvas = document.createElement('canvas', 'cornerstone');       
+        element.appendChild(canvas);
 
         var el = {
             id: idCpt++,
             element: element,
-            renderer: renderer,
             canvas: canvas,
             image : undefined, // will be set once image is loaded
             invalid: false, // true if image needs to be drawn, false if not

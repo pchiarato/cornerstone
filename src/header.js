@@ -4,3 +4,5 @@ if(typeof cornerstone === 'undefined'){
         rendering: {}
     };
 }
+
+module.exports = cornerstone;

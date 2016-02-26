@@ -16,7 +16,7 @@
     cursor:default;
 }
 
-.cornerstone-renderer{
+.cornerstone-enabled-image canvas{
     position: absolute;
     top: 50%;
     left: 50%;

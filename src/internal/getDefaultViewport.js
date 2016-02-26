@@ -23,7 +23,7 @@
 
         //quick and temporary hack for displayStaticImage() where we element is an untached canvas
         var elementSize = element.parentNode ?
-                    element.getComputedStyle()
+                    element.getBoundingClientRect()
                 :   
                     {
                         width: element.width,

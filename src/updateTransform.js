@@ -18,9 +18,16 @@
     function applyTransform(enabledElement){      
 
         var viewport = enabledElement.viewport,
+            /*
             transform = 'translate(' + 
                 (viewport.translation.x === 0 ? '-50%,' : 'calc(' + viewport.translation.x + 'px - 50%),') +
                 (viewport.translation.y === 0 ? '-50%)' : 'calc(' + viewport.translation.y + 'px - 50%))');
+           */
+           
+           transform = 'translate(' + 
+                viewport.translation.x + 'px,' +
+                viewport.translation.y + 'px)';
+           
 
         //We dont need to translate to center to apply scale/rotation thanks to transform-origin
         
@@ -47,7 +54,9 @@
 
         transform += 'scale(' + widthScale + ',' + heightScale +')';
 
-        enabledElement.renderer.style.transform = transform;
+        transform += 'translate(-50%,-50%)';
+
+        enabledElement.canvas.style.transform = transform;
 
         $(enabledElement.element).trigger("CornerstoneTransformUpdated", {
             viewport : enabledElement.viewport,
