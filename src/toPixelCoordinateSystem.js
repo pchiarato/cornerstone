@@ -74,8 +74,22 @@
         if(enabledElement === undefined)
             throw "toPixelCoordinateSystem: parameter enabledElement must not be undefined";
 
-        var el = enabledElement.canvas,            
-            offsetLeft = 0,
+        var el = enabledElement.canvas;
+
+        if(!y){
+            //x is event
+            if( x.target === el )
+                return {
+                    x: x.offsetX,
+                    y: x.offsetY
+                };
+            else{
+                y = x.pageY;
+                x = x.pageX;
+            }
+        }
+
+        var  offsetLeft = 0,
             offsetTop  = 0;
         
         do{
