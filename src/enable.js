@@ -12,7 +12,7 @@
             throw "enable: parameter element cannot be undefined";
         }
         
-        var canvas = document.createElement('canvas', 'cornerstone');       
+        var canvas = document.createElement('canvas');       
         element.appendChild(canvas);
 
         var el = {
