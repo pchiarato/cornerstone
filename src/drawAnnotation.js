@@ -14,8 +14,8 @@
      * 
      * @param drawShapesCbArr array of callbacks where shapes are drawn
      *     function( context, scaleAdjust )
-     *         @param {CanvasRenderingContext2D} [context] : 2D context of canvas
-     *         @param {Number} [scaleAdjust] : offset to add to all positions when drawing shapes
+     *         param {CanvasRenderingContext2D} [context] : 2D context of canvas
+     *         param {Number} [scaleAdjust] : offset to add to all positions when drawing shapes
      *
      *         return true to stroke the shape.
      *
