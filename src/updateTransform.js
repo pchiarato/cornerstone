@@ -1,4 +1,4 @@
-(function ($, cornerstone) {
+(function (cornerstone) {
 
     "use strict";
 
@@ -18,16 +18,11 @@
     function applyTransform(enabledElement){      
 
         var viewport = enabledElement.viewport,
-            /*
+            image = enabledElement.image,
+            
             transform = 'translate(' + 
                 (viewport.translation.x === 0 ? '-50%,' : 'calc(' + viewport.translation.x + 'px - 50%),') +
-                (viewport.translation.y === 0 ? '-50%)' : 'calc(' + viewport.translation.y + 'px - 50%))');
-           */
-           
-           transform = 'translate(' + 
-                viewport.translation.x + 'px,' +
-                viewport.translation.y + 'px)';
-           
+                (viewport.translation.y === 0 ? '-50%)' : 'calc(' + viewport.translation.y + 'px - 50%))');           
 
         //We dont need to translate to center to apply scale/rotation thanks to transform-origin
         
@@ -35,31 +30,26 @@
             transform += 'rotate(' + viewport.rotation + 'deg)'; //use radiant ?
 
         //use rotation for flip so we can animate it
-        if(viewport.hflip)
-            transform += 'rotateY(180deg)';
-        if(viewport.vflip)
-            transform += 'rotateX(180deg)';
+        transform += 'rotateY(' + (viewport.hflip ? 180 : 0) + 'deg)';
+        transform += 'rotateX(' + (viewport.vflip ? 180 : 0) + 'deg)';
 
         //scale
-        var img = enabledElement.image,
-            widthScale = enabledElement.viewport.scale,
-            heightScale = enabledElement.viewport.scale;
-
-        if(img){
-            if(img.rowPixelSpacing < img.columnPixelSpacing)
-                widthScale = widthScale * (img.columnPixelSpacing / img.rowPixelSpacing);
-            else if(img.columnPixelSpacing < img.rowPixelSpacing)
-                heightScale = heightScale * (img.rowPixelSpacing / img.columnPixelSpacing);
+        var widthScale = enabledElement.viewport.scale;
+        var heightScale = enabledElement.viewport.scale;
+       if(image){
+            if(image.rowPixelSpacing < image.columnPixelSpacing)
+                widthScale = widthScale * (image.columnPixelSpacing / image.rowPixelSpacing);
+            else if(image.columnPixelSpacing < image.rowPixelSpacing)
+                heightScale = heightScale * (image.rowPixelSpacing / image.columnPixelSpacing);
         }
 
         transform += 'scale(' + widthScale + ',' + heightScale +')';
-
-        transform += 'translate(-50%,-50%)';
 
         enabledElement.canvas.style.transform = transform;
 
         $(enabledElement.element).trigger("CornerstoneTransformUpdated", {
             viewport : enabledElement.viewport,
+            transform: transform,
             element : enabledElement.element,
             image : enabledElement.image,
             enabledElement : enabledElement,
@@ -71,4 +61,4 @@
     cornerstone.updateTransform = updateTransform;
     cornerstone.internal.applyTransform = applyTransform;
 
-}($, cornerstone));
+}(cornerstone));

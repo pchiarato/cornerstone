@@ -11,8 +11,10 @@
         if(element === undefined) {
             throw "enable: parameter element cannot be undefined";
         }
-        
-        var canvas = document.createElement('canvas');       
+
+        var canvas = document.createElement('canvas');
+        canvas.className = 'cornerstone-canvas';
+
         element.appendChild(canvas);
 
         var el = {
@@ -28,6 +30,6 @@
         return element;
     }
 
-    // module/private exports
+     // module/private exports
     cornerstone.enable = enable;
-rstone));
+}(cornerstone));
