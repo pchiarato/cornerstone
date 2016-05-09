@@ -20,10 +20,6 @@
       }
     }
 
-    function scaleToFit(elWidth, elHeight, imgWidth, imgHeight){
-        return Math.min(elWidth / imgWidth, elHeight / imgHeight);
-    }
-
     /**
      * Deprecated
      * Adjusts an images scale and center so the image is centered and completely visible

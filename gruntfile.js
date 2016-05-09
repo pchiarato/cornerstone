@@ -79,11 +79,33 @@ module.exports = function(grunt) {
                     'dist/cornerstone.min.css': ['dist/cornerstone.css']
                 }
             }
-        }
+        },
+        release: {
+          options: {
+              bump: true,                                               //default: true
+              changelog: false,                                         //default: false
 
+              indentation: '\t',                                        //default: '  ' (two spaces)
+              tagName: '<%= version %>',                                //default: '<%= version %>'
+              commitMessage: 'check out my release <%= version %>',     //default: 'release <%= version %>'
+              tagMessage: 'tagging version <%= version %>',             //default: 'Version <%= version %>',
+              beforeBump: [],                                           // optional grunt tasks to run before file versions are bumped
+              afterBump: [],                                            // optional grunt tasks to run after file versions are bumped
+              beforeRelease: [],                                        // optional grunt tasks to run after release version is bumped up but before release is packaged
+              afterRelease: [],                                         // optional grunt tasks to run after release is packaged
+              updateVars: [],                                           // optional grunt config objects to update (this will update/set the version property on the object specified)
+              github: {
+                apiRoot: 'https://api.github.com',
+                repo: 'ghetolay/cornerstone',                           //put your user/repo here
+                accessTokenVar: 'GITHUB_ACCESS_TOKEN',                  //ENVIRONMENT VARIABLE that contains GitHub Access Token
+              }
+            }
+        }
     });
 
     require('load-grunt-tasks')(grunt);
+
+    grunt.loadNpmTasks('grunt-release');
 
     grunt.registerTask('buildAll', ['copy', 'concat', 'uglify', 'jshint', 'cssmin', 'qunit']);
     grunt.registerTask('default', ['clean', 'buildAll']);
