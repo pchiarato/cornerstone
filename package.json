@@ -15,6 +15,7 @@
     "url": "https://github.com/ghetolay/cornerstone.git"
   },
   "scripts": {
+    "postinstall": "typings install",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "main": "dist/cornerstone.js",
@@ -29,9 +30,13 @@
     "grunt-contrib-watch": "^0.6.1",
     "grunt-release": "^0.13.1",
     "load-grunt-tasks": "^0.2.1",
-    "qunit": "^0.9.1"
+    "qunit": "^0.9.1",
+    "typescript": "^1.8.10",
+    "typings": "^1.0.4"
   },
   "dependencies": {
+    "es6-promise": "^3.2.1",
+    "extend": "^3.0.0",
     "jquery": "^2.2.3"
   }
 }

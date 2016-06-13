@@ -1,0 +1,26 @@
+/**
+ * This module contains a function that will set the canvas context to the pixel coordinates system
+ * making it easy to draw geometry on the image
+ */
+import { calculateTransform } from './internal/calculateTransform';
+
+
+/**
+ * Sets the canvas context transformation matrix to the pixel coordinate system.  This allows
+ * geometry to be driven using the canvas context using coordinates in the pixel coordinate system
+ * @param ee
+ * @param context
+ * @param scale optional scaler to apply
+ */
+export function setToPixelCoordinateSystem(enabledElement: CStone.EnabledElement, context: CanvasRenderingContext2D, scale?: number)
+{
+    if(enabledElement === undefined) {
+        throw "setToPixelCoordinateSystem: parameter enabledElement must not be undefined";
+    }
+    if(context === undefined) {
+        throw "setToPixelCoordinateSystem: parameter context must not be undefined";
+    }
+
+    let transform = calculateTransform(enabledElement, scale);
+    context.setTransform(transform.m[0],transform.m[1],transform.m[2],transform.m[3],transform.m[4],transform.m[5]);
+}
