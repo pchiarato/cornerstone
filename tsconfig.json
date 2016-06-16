@@ -9,12 +9,10 @@
         "removeComments": false,
         "noImplicitAny": false,
         "declaration": true,
-        "pretty": true,
-        "outDir": "./build"
+        "pretty": true
     },
     "exclude": [
         "node_modules",
-        "dist",
-        "build"
+        "dist"
     ]
 }

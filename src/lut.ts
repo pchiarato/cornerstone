@@ -144,8 +144,6 @@ export class CommonLUT implements LUT {
 	}
 
 	setWindowing(windowCenter: number, windowWidth: number): CommonLUT {
-		console.log('setWindowing ', windowCenter, windowWidth);
-
 		return new CommonLUT(windowCenter, windowWidth, !this._invert, this.slope, this.intercept);
 	}
 }
