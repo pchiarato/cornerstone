@@ -20,7 +20,8 @@
     "start": "webpack-dev-server --inline --progress --port 8080",
     "prepublish": "tsc && tsc --p tsconfig.bundle.json && uglifyjs2 dist/ng-cornerstone.js -o dist/ng-cornerstone.min.js"
   },
-  "main": "dist/ng-cornerstone.js",
+  "main": "build/index.js",
+  "typings": "build/index.d.ts",
   "dependencies": {
     "@angular/compiler": "2.0.0-rc.1",
     "@angular/core": "2.0.0-rc.1",
