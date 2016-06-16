@@ -1,6 +1,6 @@
 {
   "name": "angular2_cornerstone",
-  "version": "0.0.1",
+  "version": "0.0.1a",
   "description": "Port of cornerstone to angular2",
   "keywords": [
     "DICOM",
