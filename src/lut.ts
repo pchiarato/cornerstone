@@ -1,140 +1,184 @@
-function generateNonLinearModalityLUT(modalityLUT): CStone.LutFunc {
-  let minValue = modalityLUT.lut[0];
-  let maxValue = modalityLUT.lut[modalityLUT.lut.length - 1];
-  let maxValueMapped = modalityLUT.firstValueMapped + modalityLUT.lut.length;
-
-  return sp => {
-    if (sp < modalityLUT.firstValueMapped) {
-      return minValue;
-    }
-    else if (sp >= maxValueMapped) {
-      return maxValue;
-    }
-    else {
-      return modalityLUT.lut[sp];
-    }
-  };
+export interface LUT {
+	apply(v: number): number;
 }
 
-export function getModalityLUT(slope, intercept, modalityLUT): CStone.LutFunc {
-  if (modalityLUT) {
-    return generateNonLinearModalityLUT(modalityLUT);
-  } else {
-    return sp => sp * slope + intercept;
-  }
+export class ComposeLUT implements LUT {
+	luts: LUT[];
+
+	constructor(...luts: LUT[]) {
+		this.luts = luts;
+	}
+
+	apply(v: number): number {
+		let r = v;
+		for (let lut of this.luts)
+			r = lut.apply(v);
+
+		return r;
+	}
+
+	// TODO change luts
 }
 
-function generateNonLinearVOILUT(voiLUT: CStone.LUT): CStone.LutFunc {
-  let shift = voiLUT.numBitsPerEntry - 8;
-  let minValue = voiLUT.lut[0] >> shift;
-  let maxValue = voiLUT.lut[voiLUT.lut.length - 1] >> shift;
-  let maxValueMapped = voiLUT.firstValueMapped + voiLUT.lut.length - 1;
-  return (modalityLutValue) => {
-    if (modalityLutValue < voiLUT.firstValueMapped) {
-      return minValue;
-    }
-    else if (modalityLutValue >= maxValueMapped) {
-      return maxValue;
-    }
-    else {
-      return voiLUT.lut[modalityLutValue - voiLUT.firstValueMapped] >> shift;
-    }
-  }
+export class IdentityLUT implements LUT {
+	apply(v) {
+		return v;
+	}
 }
 
-export function getVOILUT(windowWidth: number, windowCenter: number, voiLUT: CStone.LUT): CStone.LutFunc {
-  if (voiLUT) {
-    return generateNonLinearVOILUT(voiLUT);
-  } else {
-    return (modalityLutValue) => (((modalityLutValue - (windowCenter)) / (windowWidth) + 0.5) * 255.0);
-  }
+export class PixInvertLUT implements LUT {
+	apply(v) {
+		return 255 - v;
+	}
 }
 
-export function generateLutNew(image: CStone.Image, windowWidth: number, windowCenter: number, invert: boolean, modalityLUT?: CStone.LUT, voiLUT?: CStone.LUT) {
-  let lut = image.lut;
-  let maxPixelValue = image.maxPixelValue;
-  let minPixelValue = image.minPixelValue;
+export class LinearLUT implements LUT {
 
-  let mlutfn = getModalityLUT(image.slope, image.intercept, modalityLUT);
-  let vlutfn = getVOILUT(windowWidth, windowCenter, voiLUT);
+	constructor(private slope: number, private intercept: number) {}
 
-  let offset = 0;
-  if (minPixelValue < 0) {
-    offset = minPixelValue;
-  }
-  let storedValue;
-  let modalityLutValue;
-  let voiLutValue;
-  let clampedValue;
-
-  for (storedValue = image.minPixelValue; storedValue <= maxPixelValue; storedValue++) {
-    modalityLutValue = mlutfn(storedValue);
-    voiLutValue = vlutfn(modalityLutValue);
-    clampedValue = Math.min(Math.max(voiLutValue, 0), 255);
-    if (!invert) {
-      lut[storedValue + (-offset)] = Math.round(clampedValue);
-    } else {
-      lut[storedValue + (-offset)] = Math.round(255 - clampedValue);
-    }
-  }
+	apply(v) {
+		return v * this.slope + this.intercept;
+	}
 }
 
+export class WindowingLUT implements LUT {
+	min: number;
+	max: number;
+
+	private windowWidth: number;
+
+	constructor(private windowCenter: number, windowWidth: number) {
+		this.windowWidth = Math.max(0.000001, windowWidth);
+
+		this.min = windowCenter - this.windowWidth / 2;
+		this.max = this.min + this.windowWidth;
+	}
+
+	apply(v) {
+		if (v <= this.min)
+			return 0;
+
+		if (v >= this.max)
+			return 255;
+
+		return ((v - this.windowCenter) / this.windowWidth + 0.5) * 255.0;
+	}
+}
+
+export class ModalityLUT implements LUT {
+	apply(v: number): number {
+		throw 'ModalityLUT is not implemented yet';
+	}
+}
+
+export class VoiLUT implements LUT {
+	apply(v: number): number {
+		throw 'VoiLUT is not implemented yet';
+	}
+}
 
 
 /**
- * Creates a LUT used while rendering to convert stored pixel values to
- * display pixels
- *
- * @param image
- * @returns {Array}
+ * Easier to setup and slighty better performance than ComposeLUT for common cases
  */
-export function generateLut(image: CStone.Image, windowWidth: number, windowCenter: number, invert: boolean, modalityLUT?: CStone.LUT, voiLUT?: CStone.LUT) {
-  if (image.lut === undefined) {
-    image.lut = new Int16Array(image.maxPixelValue - Math.min(image.minPixelValue, 0) + 1);
-  }
+export class CommonLUT implements LUT {
+	a: number;
+	b: number;
 
-  if (modalityLUT || voiLUT) {
-    generateLutNew(image, windowWidth, windowCenter, invert, modalityLUT, voiLUT);
-  }
-  else {
-    let lut = image.lut;
+	private _invert: boolean;
+	private _windowWidth: number;
 
-    let maxPixelValue = image.maxPixelValue;
-    let minPixelValue = image.minPixelValue;
-    let slope = image.slope;
-    let intercept = image.intercept;
-    let localWindowWidth = windowWidth;
-    let localWindowCenter = windowCenter;
-    let modalityLutValue;
-    let voiLutValue;
-    let clampedValue;
-    let storedValue;
+	constructor(
+		private _windowCenter: number,
+		windowWidth: number,
+		invert = false,
+		public slope = 1,
+		public intercept = 0) {
 
-    // NOTE: As of Nov 2014, most javascript engines have lower performance when indexing negative indexes.
-    // We improve performance by offsetting the pixel values for signed data to avoid negative indexes
-    // when generating the lut and then undo it in storedPixelDataToCanvasImagedata.  Thanks to @jpambrun
-    // for this contribution!
+		this._windowWidth = Math.max(0.000001, windowWidth);
+		this._invert = !invert;
 
-    let offset = 0;
-    if (minPixelValue < 0) {
-      offset = minPixelValue;
-    }
+		this.computeAB();
+	}
 
-    if (invert === true) {
-      for (storedValue = image.minPixelValue; storedValue <= maxPixelValue; storedValue++) {
-        modalityLutValue = storedValue * slope + intercept;
-        voiLutValue = (((modalityLutValue - (localWindowCenter)) / (localWindowWidth) + 0.5) * 255.0);
-        clampedValue = Math.min(Math.max(voiLutValue, 0), 255);
-        lut[storedValue + (-offset)] = Math.round(255 - clampedValue);
-      }
-    }
-    else {
-      for (storedValue = image.minPixelValue; storedValue <= maxPixelValue; storedValue++) {
-        modalityLutValue = storedValue * slope + intercept;
-        voiLutValue = (((modalityLutValue - (localWindowCenter)) / (localWindowWidth) + 0.5) * 255.0);
-        clampedValue = Math.min(Math.max(voiLutValue, 0), 255);
-        lut[storedValue + (-offset)] = Math.round(clampedValue);
-      }
-    }
-  }
+	get windowCenter(){
+		return this._windowCenter;
+	}
+
+	get windowWidth() {
+		return this._windowWidth;
+	}
+
+	get invert(){
+		return !this._invert;
+	}
+
+	private computeAB() {
+		this.a = 255 * this.slope / this._windowWidth * (this._invert ? -1 : 1);
+		this.b = 255 * (this.intercept - this._windowCenter) / this._windowWidth + 127.5 + (this._invert ? 255 : 0);
+	}
+
+	apply(v) {
+		return v * this.a + this.b;
+	}
+
+	doInvert(): CommonLUT {
+		// looks like it should be !this._invert but it's not because we'll invert it on the constructor
+		return this.setInvert(this._invert);
+	}
+
+	setInvert(invert: boolean): CommonLUT {
+		return new CommonLUT(this._windowCenter, this._windowWidth, invert, this.slope, this.intercept);
+	}
+
+	incrWindowCenter(deltawWindowCenter: number): CommonLUT {
+		return this.setWindowing(this._windowCenter + deltawWindowCenter, this._windowWidth);
+	}
+
+	incrWindowWidth(deltaWindowWidth: number): CommonLUT {
+		return this.setWindowing(this._windowCenter, this._windowWidth + deltaWindowWidth);
+	}
+
+	incrWindowing(deltaWindowCenter: number, deltaWindowWidth: number) {
+		return this.setWindowing(this._windowCenter + deltaWindowCenter, this._windowWidth + deltaWindowWidth);
+	}
+
+	setWindowing(windowCenter: number, windowWidth: number): CommonLUT {
+		console.log('setWindowing ', windowCenter, windowWidth);
+
+		return new CommonLUT(windowCenter, windowWidth, !this._invert, this.slope, this.intercept);
+	}
+}
+
+export interface LutMetadata {
+	slope?: number;
+	intercept?: number;
+
+	windowCenter?: number;
+	windowWidth?: number;
+
+	modalityLUT?: LUT;
+	voiLUT?: LUT;
+
+	invert: boolean;
+}
+
+/**
+ * [getLut description]
+ * @param  {LutMetadata} opt should contains at least voiLUT or couple windowCenter/windowWidth.
+ * @return {LUT}             [description]
+ */
+export function getLut(opt: LutMetadata): LUT {
+	let hasSlopeIntercept = opt.slope === undefined || opt.intercept === undefined || (opt.slope === 1 && opt.intercept === 0);
+
+	// TODO
+	if (opt.modalityLUT || opt.voiLUT) {
+		let modalityLut = opt.modalityLUT || (hasSlopeIntercept ? new IdentityLUT() : new LinearLUT(opt.slope, opt.intercept)),
+			voiLut = opt.voiLUT || new WindowingLUT(opt.windowCenter, opt.windowWidth);
+
+		// TODO we won't be able to easily invert
+		return new ComposeLUT(modalityLut, voiLut, opt.invert ? undefined : new PixInvertLUT());
+	}
+
+	return new CommonLUT(opt.windowCenter, opt.windowWidth, opt.invert, opt.slope, opt.intercept);
 }

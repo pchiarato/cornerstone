@@ -1,112 +1,182 @@
-import { Transform } from './transform.class';
-import { getEnabledElement } from './enabledElement';
+import { Coord, Matrix } from './matrix';
+import { Image } from './image';
 
-export function getTransform(enabledElement: CStone.EnabledElement): Transform {
-    // For now we will calculate it every time it is requested.  In the future, we may want to cache
-    // it in the enabled element to speed things up
-    let transform = calculateTransform(enabledElement);
-    return transform;
+export { Coord, Matrix } from './matrix';
+
+export function scaleToFit(elWidth: number, elHeight: number, imgWidthOrImage: number | Image, imgHeight?: number): number {
+	let imgWidth: number;
+
+	if (isNaN(<number>imgWidthOrImage)) {
+		imgHeight = (<Image>imgWidthOrImage).rows;
+		imgWidth = (<Image>imgWidthOrImage).columns;
+	} else
+		imgWidth = <number>imgWidthOrImage;
+
+	return Math.min(elWidth / imgWidth, elHeight / imgHeight);
 }
 
-export function calculateTransform(enabledElement: CStone.EnabledElement, scale?: number) {
+export class Transform {
 
-    let transform = new Transform();
+	// TODO named parameter
+	constructor(
+		private _scale = 1,
+		private _translation: Coord = { x: 0, y: 0 },
+		private _rotation = 0,
+		private _hflip = false,
+		private _vflip = false) {
 
-    //Apply the rotation before scaling for non square pixels
-    let angle = enabledElement.viewport.rotation;
-    if (angle !== 0) {
-        transform.rotate(angle * Math.PI / 180);
-    }
+	}
 
-    // apply the scale
-    let widthScale = enabledElement.viewport.scale;
-    let heightScale = enabledElement.viewport.scale;
-    if (enabledElement.image.rowPixelSpacing < enabledElement.image.columnPixelSpacing) {
-        widthScale = widthScale * (enabledElement.image.columnPixelSpacing / enabledElement.image.rowPixelSpacing);
-    }
-    else if (enabledElement.image.columnPixelSpacing < enabledElement.image.rowPixelSpacing) {
-        heightScale = heightScale * (enabledElement.image.rowPixelSpacing / enabledElement.image.columnPixelSpacing);
-    }
-    transform.scale(widthScale, heightScale);
+	get scale() {
+		return this._scale;
+	}
 
-    // unrotate to so we can translate unrotated
-    if (angle !== 0) {
-        transform.rotate(-angle * Math.PI / 180);
-    }
+	get translation() {
+		return this._translation;
+	}
 
-    // apply the pan offset
-    transform.translate(enabledElement.viewport.translation.x, enabledElement.viewport.translation.y);
+	get rotation() {
+		return this._rotation;
+	}
 
-    // rotate again so we can apply general scale
-    if (angle !== 0) {
-        transform.rotate(angle * Math.PI / 180);
-    }
+	get hflip() {
+		return this._hflip;
+	}
 
-    scale = scale || 1;
-    transform.scale((enabledElement.viewport.hflip ? -1 : 1) * scale, (enabledElement.viewport.vflip ? -1 : 1) * scale);
+	get vflip() {
+		return this._vflip;
+	}
 
-    // translate the origin back to the corner of the image so the event handlers can draw in image coordinate system
-    //transform.translate(-enabledElement.image.width / 2 , -enabledElement.image.height/ 2);
-    return transform;
-}
 
-export function scaleToFit(elWidth: number, elHeight: number, imgWidthOrImage: number | CStone.Image, imgHeight?: number): number {
-    let imgWidth: number;
+	doScale(scale: number): Transform {
+		return this.setScale(this._scale + scale);
+	}
 
-    if (isNaN(<number>imgWidthOrImage)) {
-        imgHeight = (<CStone.Image>imgWidthOrImage).rows;
-        imgWidth = (<CStone.Image>imgWidthOrImage).columns;
-    }
-    else
-        imgWidth = <number>imgWidthOrImage;
+	setScale(scale: number): Transform {
+		return new Transform( Math.max(0.25, scale), this._translation, this._rotation, this._hflip, this._vflip);
+	}
 
-    return Math.min(elWidth / imgWidth, elHeight / imgHeight);
-}
+	doTranslation(x: number, y: number): Transform {
+		return this.setTranslation({
+			x: this._translation.x + x,
+			y: this._translation.y + y
+		});
+	}
 
-export function updateTransform(element: HTMLElement) {
-    let enabledElement = getEnabledElement(element);
-    if (enabledElement.image === undefined) {
-        throw "updateTransform: image has not been loaded yet";
-    }
+	setTranslation(translation: Coord): Transform {
+		return new Transform(this._scale, translation, this._rotation, this._hflip, this._vflip);
+	}
 
-    let viewport = enabledElement.viewport,
-        image = enabledElement.image,
+	doRotation(rotation: number): Transform {
+		return this.setRotation((this._rotation + rotation) % (2 * Math.PI));
+	}
 
-        transform = 'translate(' +
-            (viewport.translation.x === 0 ? '-50%,' : 'calc(' + viewport.translation.x + 'px - 50%),') +
-            (viewport.translation.y === 0 ? '-50%)' : 'calc(' + viewport.translation.y + 'px - 50%))');
+	setRotation(rotation: number): Transform {
+		return new Transform(this._scale, this._translation, rotation, this._hflip, this._vflip);
+	}
 
-    //We dont need to translate to center to apply scale/rotation thanks to transform-origin
+	doHflip(): Transform {
+		return this.setHflip(!this._hflip);
+	}
 
-    if (viewport.rotation % 360 !== 0)//heavy test for small optimisation ?
-        transform += 'rotate(' + viewport.rotation + 'deg)'; //use radiant ?
+	setHflip(hflip: boolean): Transform {
+		return new Transform(this._scale, this._translation, this._rotation, hflip, this._vflip);
+	}
 
-    //use rotation for flip so we can animate it
-    transform += 'rotateY(' + (viewport.hflip ? 180 : 0) + 'deg)';
-    transform += 'rotateX(' + (viewport.vflip ? 180 : 0) + 'deg)';
+	doVflip(): Transform {
+		return this.setVflip(!this._vflip);
+	}
 
-    //scale
-    let widthScale = enabledElement.viewport.scale;
-    let heightScale = enabledElement.viewport.scale;
-    if (image) {
-        if (image.rowPixelSpacing < image.columnPixelSpacing)
-            widthScale = widthScale * (image.columnPixelSpacing / image.rowPixelSpacing);
-        else if (image.columnPixelSpacing < image.rowPixelSpacing)
-            heightScale = heightScale * (image.rowPixelSpacing / image.columnPixelSpacing);
-    }
+	setVflip(vflip: boolean): Transform {
+		return new Transform(this._scale, this._translation, this._rotation, this._hflip, vflip);
+	}
 
-    transform += 'scale(' + widthScale + ',' + heightScale + ')';
 
-    enabledElement.canvas.style.transform = transform;
+	// TODO cache matrix and/or transform string ?
+	getMatrix(scale?: number): Matrix {
 
-    /*
-    $(enabledElement.element).trigger("CornerstoneTransformUpdated", {
-        viewport : enabledElement.viewport,
-        transform: transform,
-        element : enabledElement.element,
-        image : enabledElement.image,
-        enabledElement : enabledElement,
-        canvasContext: enabledElement.canvas.getContext('2d')
-    });
-    */
+		let matrix = new Matrix();
+
+		// Apply the rotation before scaling for non square pixels
+		let angle = this._rotation;
+		if (angle !== 0) {
+			matrix.rotate(angle);
+		}
+
+		// apply the scale
+		let widthScale = this._scale;
+		let heightScale = this._scale;
+		// TODO
+		/*
+		if (enabledElement.image.rowPixelSpacing < enabledElement.image.columnPixelSpacing) {
+			widthScale = widthScale * (enabledElement.image.columnPixelSpacing / enabledElement.image.rowPixelSpacing);
+		}
+		else if (enabledElement.image.columnPixelSpacing < enabledElement.image.rowPixelSpacing) {
+			heightScale = heightScale * (enabledElement.image.rowPixelSpacing / enabledElement.image.columnPixelSpacing);
+		}
+		*/
+		matrix.scale(widthScale, heightScale);
+
+		// unrotate to so we can translate unrotated
+		if (angle !== 0) {
+			matrix.rotate(-angle);
+		}
+
+		// apply the pan offset
+		matrix.translate(this._translation.x, this._translation.y);
+
+		// rotate again so we can apply general scale
+		if (angle !== 0) {
+			matrix.rotate(angle);
+		}
+
+		scale = scale || 1;
+		matrix.scale((this._hflip ? -1 : 1) * scale, (this._vflip ? -1 : 1) * scale);
+
+		// translate the origin back to the corner of the image so the event handlers can draw in image coordinate system
+		// transform.translate(-enabledElement.image.width / 2 , -enabledElement.image.height/ 2);
+		return matrix;
+	}
+
+	getCSSTransform(): string {
+
+		let transform = 'translate(' +
+			(this._translation.x === 0 ? '-50%,' : 'calc(' + this._translation.x + 'px - 50%),') +
+			(this._translation.y === 0 ? '-50%)' : 'calc(' + this._translation.y + 'px - 50%))');
+
+		// We dont need to translate to center to apply scale/rotation thanks to transform-origin
+
+		transform += 'rotate(' + this._rotation + 'rad)';
+
+		// use rotation for flip so we can animate it
+		transform += 'rotateY(' + (this._hflip ? Math.PI : 0) + 'rad)';
+		transform += 'rotateX(' + (this._vflip ? Math.PI : 0) + 'rad)';
+
+		// scale
+		let widthScale = this._scale;
+		let heightScale = this._scale;
+		/* TODO
+		if (image) {
+			if (image.rowPixelSpacing < image.columnPixelSpacing)
+				widthScale = widthScale * (image.columnPixelSpacing / image.rowPixelSpacing);
+			else if (image.columnPixelSpacing < image.rowPixelSpacing)
+				heightScale = heightScale * (image.rowPixelSpacing / image.columnPixelSpacing);
+		}
+		*/
+
+		transform += 'scale(' + widthScale + ',' + heightScale + ')';
+
+		return transform;
+
+		/*
+		$(enabledElement.element).trigger("CornerstoneTransformUpdated", {
+			viewport : enabledElement.viewport,
+			transform: transform,
+			element : enabledElement.element,
+			image : enabledElement.image,
+			enabledElement : enabledElement,
+			canvasContext: enabledElement.canvas.getContext('2d')
+		});
+		*/
+	}
 }

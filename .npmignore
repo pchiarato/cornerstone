@@ -1,0 +1,13 @@
+dist
+examples
+
+# Node
+node_modules
+npm-debug.log
+
+# TypeScript
+typings
+
+# IDE
+.idea
+*.sublime*
