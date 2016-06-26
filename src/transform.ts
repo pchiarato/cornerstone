@@ -68,7 +68,8 @@ export class Transform {
 	}
 
 	doRotation(rotation: number): Transform {
-		return this.setRotation((this._rotation + rotation) % (2 * Math.PI));
+															// mess up with rotation direction when animated
+		return this.setRotation((this._rotation + rotation) /*% (2 * Math.PI)*/);
 	}
 
 	setRotation(rotation: number): Transform {
