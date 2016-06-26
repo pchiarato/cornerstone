@@ -20,17 +20,17 @@ export class ComposeLUT implements LUT {
 	// TODO change luts
 }
 
-export class IdentityLUT implements LUT {
+export let IdentityLUT: LUT = {
 	apply(v) {
 		return v;
 	}
-}
+};
 
-export class PixInvertLUT implements LUT {
+export let PixInvertLUT: LUT = {
 	apply(v) {
 		return 255 - v;
 	}
-}
+};
 
 export class LinearLUT implements LUT {
 
@@ -38,36 +38,6 @@ export class LinearLUT implements LUT {
 
 	apply(v) {
 		return v * this.slope + this.intercept;
-	}
-}
-
-export class WindowingLUT implements LUT {
-	min: number;
-	max: number;
-
-	private windowWidth: number;
-
-	constructor(private windowCenter: number, windowWidth: number) {
-		this.windowWidth = Math.max(0.000001, windowWidth);
-
-		this.min = windowCenter - this.windowWidth / 2;
-		this.max = this.min + this.windowWidth;
-	}
-
-	apply(v) {
-		if (v <= this.min)
-			return 0;
-
-		if (v >= this.max)
-			return 255;
-
-		return ((v - this.windowCenter) / this.windowWidth + 0.5) * 255.0;
-	}
-}
-
-export class ModalityLUT implements LUT {
-	apply(v: number): number {
-		throw 'ModalityLUT is not implemented yet';
 	}
 }
 
@@ -81,70 +51,63 @@ export class VoiLUT implements LUT {
 /**
  * Easier to setup and slighty better performance than ComposeLUT for common cases
  */
-export class CommonLUT implements LUT {
+export class WindowingLUT implements LUT {
 	a: number;
 	b: number;
 
-	private _invert: boolean;
-	private _windowWidth: number;
+	private readonly invert: boolean;
+	private readonly windowWidth: number;
+	private readonly windowCenter: number;
 
 	constructor(
-		private _windowCenter: number,
+		windowCenter: number,
 		windowWidth: number,
-		invert = false,
-		public slope = 1,
-		public intercept = 0) {
+		invert = false) {
 
-		this._windowWidth = Math.max(0.000001, windowWidth);
-		this._invert = !invert;
+		this.windowCenter = windowCenter;
+		this.windowWidth = Math.max(0.000001, windowWidth);
+		this.invert = !invert;
 
-		this.computeAB();
-	}
+	 	this.a = (invert ? -1 : 1) * 255 / (windowWidth - 1);
+        //this.b = (invert ? : 127.5) + ( (-255 * windowCenter) + 127.5) / (windowWidth - 1) + 127.5;
+    }
 
-	get windowCenter(){
-		return this._windowCenter;
-	}
-
-	get windowWidth() {
-		return this._windowWidth;
-	}
-
-	get invert(){
-		return !this._invert;
-	}
-
-	private computeAB() {
-		this.a = 255 * this.slope / this._windowWidth * (this._invert ? -1 : 1);
-		this.b = 255 * (this.intercept - this._windowCenter) / this._windowWidth + 127.5 + (this._invert ? 255 : 0);
-	}
-
+	// TODO this isn't working
 	apply(v) {
 		return v * this.a + this.b;
 	}
 
-	doInvert(): CommonLUT {
+	toggleInvert(): WindowingLUT {
 		// looks like it should be !this._invert but it's not because we'll invert it on the constructor
-		return this.setInvert(this._invert);
+		return this.setInvert(this.invert);
 	}
 
-	setInvert(invert: boolean): CommonLUT {
-		return new CommonLUT(this._windowCenter, this._windowWidth, invert, this.slope, this.intercept);
+	setInvert(invert: boolean): WindowingLUT {
+		return new WindowingLUT(this.windowCenter, this.windowWidth, invert);
 	}
 
-	incrWindowCenter(deltawWindowCenter: number): CommonLUT {
-		return this.setWindowing(this._windowCenter + deltawWindowCenter, this._windowWidth);
+	incrWindowCenter(deltawWindowCenter: number): WindowingLUT {
+		return this.setWindowCenter(this.windowCenter + deltawWindowCenter);
 	}
 
-	incrWindowWidth(deltaWindowWidth: number): CommonLUT {
-		return this.setWindowing(this._windowCenter, this._windowWidth + deltaWindowWidth);
+	incrWindowWidth(deltaWindowWidth: number): WindowingLUT {
+		return this.setWindowWidth(this.windowWidth + deltaWindowWidth);
 	}
 
 	incrWindowing(deltaWindowCenter: number, deltaWindowWidth: number) {
-		return this.setWindowing(this._windowCenter + deltaWindowCenter, this._windowWidth + deltaWindowWidth);
+		return this.setWindowing(this.windowCenter + deltaWindowCenter, this.windowWidth + deltaWindowWidth);
 	}
 
-	setWindowing(windowCenter: number, windowWidth: number): CommonLUT {
-		return new CommonLUT(windowCenter, windowWidth, !this._invert, this.slope, this.intercept);
+	setWindowCenter(windowCenter: number): WindowingLUT {
+		return this.setWindowing(windowCenter, this.windowWidth);
+	}
+
+	setWindowWidth(windowWidth: number): WindowingLUT {
+		return this.setWindowing(this.windowCenter, windowWidth);
+	}
+
+	setWindowing(windowCenter: number, windowWidth: number): WindowingLUT {
+		return new WindowingLUT(windowCenter, windowWidth, !this.invert);
 	}
 }
 
@@ -167,16 +130,7 @@ export interface LutMetadata {
  * @return {LUT}             [description]
  */
 export function getLut(opt: LutMetadata): LUT {
-	let hasSlopeIntercept = opt.slope === undefined || opt.intercept === undefined || (opt.slope === 1 && opt.intercept === 0);
 
-	// TODO
-	if (opt.modalityLUT || opt.voiLUT) {
-		let modalityLut = opt.modalityLUT || (hasSlopeIntercept ? new IdentityLUT() : new LinearLUT(opt.slope, opt.intercept)),
-			voiLut = opt.voiLUT || new WindowingLUT(opt.windowCenter, opt.windowWidth);
-
-		// TODO we won't be able to easily invert
-		return new ComposeLUT(modalityLut, voiLut, opt.invert ? undefined : new PixInvertLUT());
-	}
-
-	return new CommonLUT(opt.windowCenter, opt.windowWidth, opt.invert, opt.slope, opt.intercept);
+	// TODO set invert to voiLUT once it's created :)
+	return opt.voiLUT || new WindowingLUT(opt.windowCenter, opt.windowWidth, opt.invert);
 }

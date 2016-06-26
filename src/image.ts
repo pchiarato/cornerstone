@@ -1,4 +1,4 @@
-import { LUT } from './lut';
+import { LUT, WindowingLUT } from './lut';
 
 export interface ImageConstructor {
 	// not sure if we absolutely wants it.
@@ -78,6 +78,14 @@ export abstract class Image {
 	}
 
 	abstract render(canvas: HTMLCanvasElement, lut: LUT): void;
+
+	// TODO
+	getDefaultLinearLUT(): LUT {
+		let maxVoi = this.maxPixelValue,
+			minVoi = this.minPixelValue;
+
+		return new WindowingLUT((maxVoi + minVoi) / 2, maxVoi - minVoi);
+	}
 
 	/*
 	   Return a canvas with the image displayed on
