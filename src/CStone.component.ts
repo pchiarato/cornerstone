@@ -30,7 +30,7 @@ import { Image } from './image';
 		}
 	`],
 	template: `
-		<canvas #canvas [style.transform]="transform.getCSSTransform() | safesan"></canvas>
+		<canvas #canvas [style.transform]="getCSSTransform() | safesan"></canvas>
 	`,
 	pipes: [ SafeSanitization ],
 	changeDetection: ChangeDetectionStrategy.OnPush
@@ -38,12 +38,13 @@ import { Image } from './image';
 
 export class CStoneComponent implements OnInit, OnChanges, AfterViewInit {
 	@ViewChild('canvas')
-	canvasRef: ElementRef;
+	private canvasRef: ElementRef;
+	canvas: HTMLCanvasElement;
 
 	// nativeElement: HTMLElement;
 
 	@Input() transform: Transform = new Transform();
-	@Input() lut: LUT = new IdentityLUT();
+	@Input() lut: LUT;
 	@Input() image: Image;
 
 	@Output() render = new EventEmitter();
@@ -54,21 +55,36 @@ export class CStoneComponent implements OnInit, OnChanges, AfterViewInit {
 	}
 	*/
 
+	getCSSTransform() {
+		if (this.transform)
+			return this.transform.getCSSTransform();
+	}
+
 	drawImage() {
 		if (this.image) {
 			// only if different ?
-			this.canvasRef.nativeElement.width = this.image.width;
-			this.canvasRef.nativeElement.height = this.image.height;
+			this.canvas.width = this.image.width;
+			this.canvas.height = this.image.height;
 
-			this.image.render(this.canvasRef.nativeElement, this.lut);
+			let lut = this.lut || IdentityLUT;
+
+			this.image.render(this.canvas, lut);
 
 			// TODO interface of event
+			/*
 			this.render.emit({
-				canvas: this.canvasRef.nativeElement,
+				canvas: this.canvas,
 				image: this.image,
 				transform: this.transform,
-				lut: this.lut
+				lut: lut
 			});
+			*/
+		}
+		else {
+			let context = this.canvas.getContext('2d');
+
+			context.fillStyle = '#000';
+			context.fillRect(0, 0, this.canvas.width, this.canvas.height);
 		}
 	}
 
@@ -82,6 +98,8 @@ export class CStoneComponent implements OnInit, OnChanges, AfterViewInit {
 	}
 
 	ngAfterViewInit() {
+		this.canvas = this.canvasRef.nativeElement;
+
 		this.drawImage();
 	}
 }
