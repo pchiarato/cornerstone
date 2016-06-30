@@ -1,5 +1,11 @@
 import { LUT, WindowingLUT } from './lut';
 
+export enum Type {
+	GRAYSCALE,
+	RGB,
+	RGBA
+}
+
 export interface ImageConstructor {
 	// not sure if we absolutely wants it.
 	// This is useful for sure for loader but for display purpose ?
@@ -26,10 +32,28 @@ class Chunk{
 }
 */
 
+/**
+ * To create the rendering function, allowing flexibility and performance.
+ * Accessible variable are :
+ * 	- img : Image
+ * 	- lut : LUT (this)
+ * 	- imgData: Uint8clampedArray
+ *
+ * /*\ This must be js code not ts => DONT USE let it slows function execution A LOT
+ */
+export interface ImageRendering {
+	getInitStatements: () => string;
+
+	/* Must create v variable */
+	getLoopStatements: (lutStatements: string) => string;
+}
+
 // why isn't it part of lib.d.ts !?
 export interface TypedArray {
 	length: number;
 	[idx: number]: number;
+
+	/*readonly*/ buffer: ArrayBuffer;
 
 	slice: (begin?: number, end?: number) => TypedArray;
 }
@@ -38,6 +62,8 @@ export interface TypedArray {
 
 export abstract class Image {
 	imageId: string;
+
+	type: Type;
 
 	rows: number;
 	height: number;
@@ -52,6 +78,10 @@ export abstract class Image {
 	minPixelValue: number;
 	maxPixelValue: number;
 
+	renderingBuilder: ImageRendering;
+
+	// divide big image into chunks and use webworker for rendering
+	// never tried it with WorkerRenderer yet
 	// private chunks: Chunk[];
 
 	constructor(public pixelData: TypedArray, opt: ImageConstructor) {
@@ -77,10 +107,8 @@ export abstract class Image {
 		*/
 	}
 
-	abstract render(canvas: HTMLCanvasElement, lut: LUT): void;
-
 	// TODO
-	getDefaultLinearLUT(): LUT {
+	getDefaultLUT(): WindowingLUT {
 		let maxVoi = this.maxPixelValue,
 			minVoi = this.minPixelValue;
 
@@ -208,37 +236,95 @@ export abstract class Image {
 	*/
 }
 
+// TODO Do not create a class just for that :)
 export class GrayscaleImage extends Image {
+	static GrayscaleImageRendering: ImageRendering = {
+		getInitStatements(): string {
+			return `
+				var pixelData = img.pixelData,
 
-	storedPixelDataToCanvasImageData(lut: LUT, canvasImageDataData: Uint8ClampedArray) {
-		let pixelData = this.pixelData;
-		let canvasImageDataIndex = 3;
-		let storedPixelDataIndex = 0;
-		let localNumPixels = pixelData.length;
+					i_imgData = 3,
+					i_pixelData = 0,
+					length = pixelData.length;
+			`;
+		},
 
-		while (storedPixelDataIndex < localNumPixels) {
-			canvasImageDataData[canvasImageDataIndex] = lut.apply(pixelData[storedPixelDataIndex++]); // alpha
-			canvasImageDataIndex += 4;
+		getLoopStatements(lutStatements: string): string {
+			return `
+				while (i_pixelData < length) {
+					var v = pixelData[i_pixelData++];
+					${lutStatements}
+					imgData[i_imgData] = v;
+					i_imgData += 4;
+				}
+			`;
 		}
+	};
+
+	get renderingBuilder() {
+		return GrayscaleImage.GrayscaleImageRendering;
 	}
 
-	render(canvas: HTMLCanvasElement, lut: LUT) {
-		/* There is a bug when applying transform on canvas with chrome/chromium (most likely all webkit/blink browsers)
-			@see https://code.google.com/p/chromium/issues/detail?id=562973
-		 	So depending on how this bug will be handled we may need to revert back drawing black on white this means
-			- fill all bytes of imageData (rgba)
-			or
-			- use a second canvas and do c2.fillRect() -> c2.getImageData() -> c2.putImageData() -> c1.drawImage(c2)
-		*/
-		let context = canvas.getContext('2d'),
-			canvasData = context.createImageData(canvas.width, canvas.height);
+	type = Type.GRAYSCALE;
 
-		this.storedPixelDataToCanvasImageData(lut, canvasData.data);
+	/*
+	constructor(public pixelData: TypedArray, opt: ImageConstructor) {
+		super(pixelData, opt);
 
-		context.putImageData(canvasData, 0, 0);
+		let buff = [];
+
+		for (let i = 0, l = pixelData.length; i < l; i++) {
+			let v = pixelData[i];
+
+			let arr = buff[v];
+			if (!arr)
+				arr = buff[v] = [];
+
+			arr.push(i);
+			//arr.push(i * 4 + 3);
+		}
+
+		this.pixelData2 = buff;
 	}
+
+	render2(canvas: HTMLCanvasElement, lut: LUT) {
+		let context = canvas.getContext('2d');
+		let imgData = context.createImageData(canvas.width, canvas.height);
+
+		// let imgDataBuffer = imgData.data,
+		let imgDataBuffer = new Uint32Array(imgData.data.buffer);
+		//let	pixelData = this.pixelData;
+		let	pixelData2 = this.pixelData2;
+
+		let	minPix = this.minPixelValue,
+			maxPix = this.maxPixelValue,
+
+			max = lut.max - 1;
+
+		let i = lut.min + 1;
+
+		while (i < max) {
+			let valueArr = pixelData2[i++];
+			if ( valueArr !== undefined ) {
+				let pixV = lutArr[ i + offset ];
+				let v = 0xFF000000 | (pixV << 16) | (pixV << 8) | pixV;
+				for (let j = 0, l = valueArr.length; j < l; j++)
+					imgDataBuffer[ valueArr[j] ] = v;
+			}
+		}
+
+		while (i <= maxPix) {
+			let valueArr = pixelData2[i++];
+			if ( valueArr !== undefined) {
+				for (let j = 0, l = valueArr.length; j < l; j++)
+					imgDataBuffer[ valueArr[j] ] = 0xFFFFFFFFF;
+			}
+		}
+
+		context.putImageData(imgData, 0, 0);
+	}
+	*/
 }
-
 
 /*
 export class ColorImage extends Image {

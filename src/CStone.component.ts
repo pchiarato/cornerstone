@@ -30,45 +30,67 @@ import { Image } from './image';
 		}
 	`],
 	template: `
-		<canvas #canvas [style.transform]="getCSSTransform() | safesan"></canvas>
+		<canvas #canvas [style.transform]="_transform.getCSSTransform() | safesan"></canvas>
 	`,
 	pipes: [ SafeSanitization ],
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
 
 export class CStoneComponent implements OnInit, OnChanges, AfterViewInit {
+
 	@ViewChild('canvas')
 	private canvasRef: ElementRef;
 	canvas: HTMLCanvasElement;
 
 	// nativeElement: HTMLElement;
 
-	@Input() transform: Transform = new Transform();
-	@Input() lut: LUT;
+	protected _lut: LUT = new IdentityLUT();
+	protected _transform = new Transform();
+	protected renderingFunc: Function;
+
+	@Input() set transform(transform: Transform) {
+		this._transform = transform || new Transform();
+	}
+	get transform() {
+		return this._transform;
+	}
+
+	@Input() set lut(lut: LUT) {
+		this._lut = lut || new IdentityLUT();
+	};
+	get lut() {
+		return this._lut;
+	}
+
 	@Input() image: Image;
 
 	@Output() render = new EventEmitter();
 
-	/*
-	constructor(elRef: ElementRef){
-		this.nativeElement = elRef.nativeElement;
-	}
-	*/
-
-	getCSSTransform() {
-		if (this.transform)
-			return this.transform.getCSSTransform();
+	private buildRenderingFunc() {
+		this.renderingFunc = new Function('img', 'lut', 'imgData',
+			this.image.renderingBuilder.getInitStatements() +
+			this.lut.renderingBuilder.getInitStatements() +
+			this.image.renderingBuilder.getLoopStatements( this.lut.renderingBuilder.getApplyStatements() )
+		);
 	}
 
 	drawImage() {
+
 		if (this.image) {
-			// only if different ?
-			this.canvas.width = this.image.width;
-			this.canvas.height = this.image.height;
+			// console.log(this.renderingFunc.toString());
 
-			let lut = this.lut || IdentityLUT;
+			// TODO Modifing canvas size reset the drawing so be sure renderer will redraw it (invalidated parameter ?)
+			if (this.canvas.width !== this.image.width)
+				this.canvas.width = this.image.width;
+			if (this.canvas.height !== this.image.height)
+				this.canvas.height = this.image.height;
 
-			this.image.render(this.canvas, lut);
+			let context = this.canvas.getContext('2d'),
+				imgData = context.createImageData(this.canvas.width, this.canvas.height);
+
+			this.renderingFunc(this.image, this._lut, imgData.data);
+
+			context.putImageData(imgData, 0, 0);
 
 			// TODO interface of event
 			/*
@@ -88,12 +110,33 @@ export class CStoneComponent implements OnInit, OnChanges, AfterViewInit {
 		}
 	}
 
-	ngOnChanges(changes: { [propName: string]: SimpleChange }) { }
+	ngOnChanges(changes: { [propName: string]: SimpleChange }) {}
 
 	ngOnInit() {
 		this.ngOnChanges = (changes: { [propName: string]: SimpleChange }) => {
-			if (changes['lut'] || changes['image'])
+			let lut = changes['lut'],
+				image = changes['image'];
+
+			if (lut || image) {
+				if ((
+						// image has changed
+						image &&
+						// we have set an actual image (not null)
+						image.currentValue &&
+						// we  didn't had an image previously set or renderingBuilder differ from previous image
+						(!image.previousValue || image.currentValue.renderingBuilder !== image.previousValue.rendereringBuilder )
+					) ||
+					(
+						// lut has changed
+						lut &&
+						// 	no need to test if lut.currentValue nor lut.previousValue are not null because setter prevents it
+
+						// renderingBuilder differ from previous
+						lut.currentValue.renderingBuilder !== lut.previousValue.renderingBuilder
+					))
+						this.buildRenderingFunc();
 				this.drawImage();
+			}
 		};
 	}
 
