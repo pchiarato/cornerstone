@@ -217,32 +217,6 @@ export class WindowingLUT extends LinearLUT implements LUT {
 		this.windowWidth = _windowWidth;
 	}
 
-	/*
-	private buildBuffer() {
-		let ww = this.windowWidth,
-			wc = this.windowCenter,
-
-			bufferSize = ww,
-			buffer = this.buffer = new Uint8ClampedArray(bufferSize),
-
-			coef = (this.invert ? -1 : 1) * 255 / ww,
-			i = 0;
-
-		while ( i < bufferSize)
-			buffer[i++] = i * coef;
-
-		this.bufferOffset = -(wc - (ww / 2));
-	}
-
-	protected get min() {
-		return this.windowCenter - this.windowWidth / 2;
-	}
-
-	protected get max() {
-		return this.windowCenter + this.windowWidth / 2;
-	}
-	*/
-
 	setInvert(invert: boolean): WindowingLUT {
 		return new WindowingLUT(this.windowCenter, this.windowWidth, invert);
 	}

@@ -1,4 +1,4 @@
-import { LUT, WindowingLUT } from './lut';
+import { WindowingLUT } from './lut';
 
 export enum Type {
 	GRAYSCALE,
@@ -23,14 +23,6 @@ export interface ImageConstructor {
 	minPixelValue: number;
 	maxPixelValue: number;
 }
-
-/*
-class Chunk{
-	availability: Subject<boolean>;
-
-	constructor( private buffer: TypedArray) {}
-}
-*/
 
 /**
  * To create the rendering function, allowing flexibility and performance.
@@ -58,8 +50,6 @@ export interface TypedArray {
 	slice: (begin?: number, end?: number) => TypedArray;
 }
 
-// let chunkSize = 512 * 512;
-
 export abstract class Image {
 	imageId: string;
 
@@ -80,31 +70,9 @@ export abstract class Image {
 
 	renderingBuilder: ImageRendering;
 
-	// divide big image into chunks and use webworker for rendering
-	// never tried it with WorkerRenderer yet
-	// private chunks: Chunk[];
-
 	constructor(public pixelData: TypedArray, opt: ImageConstructor) {
 		for (let propName in opt)
 			this[propName] = opt[propName];
-
-		/*
-		let offset = 0,
-		length = pixelData.length,
-		chunksize_2 = chunkSize*2;
-
-		while (offset < length) {
-			//we don't want chunk smaller than chunk size
-			//so if size left is smaller that 2 chunk size we go with it to avoid having a smaller chunk size on next loop
-			let size = length - offset;
-			if (size > chunksize_2)
-				size = chunkSize;
-
-			this.chunks.push(new Chunk(pixelData.slice(offset, size)));
-
-			offset += size;
-		}
-		*/
 	}
 
 	// TODO
@@ -236,7 +204,6 @@ export abstract class Image {
 	*/
 }
 
-// TODO Do not create a class just for that :)
 export class GrayscaleImage extends Image {
 	static GrayscaleImageRendering: ImageRendering = {
 		getInitStatements(): string {
@@ -266,64 +233,6 @@ export class GrayscaleImage extends Image {
 	}
 
 	type = Type.GRAYSCALE;
-
-	/*
-	constructor(public pixelData: TypedArray, opt: ImageConstructor) {
-		super(pixelData, opt);
-
-		let buff = [];
-
-		for (let i = 0, l = pixelData.length; i < l; i++) {
-			let v = pixelData[i];
-
-			let arr = buff[v];
-			if (!arr)
-				arr = buff[v] = [];
-
-			arr.push(i);
-			//arr.push(i * 4 + 3);
-		}
-
-		this.pixelData2 = buff;
-	}
-
-	render2(canvas: HTMLCanvasElement, lut: LUT) {
-		let context = canvas.getContext('2d');
-		let imgData = context.createImageData(canvas.width, canvas.height);
-
-		// let imgDataBuffer = imgData.data,
-		let imgDataBuffer = new Uint32Array(imgData.data.buffer);
-		//let	pixelData = this.pixelData;
-		let	pixelData2 = this.pixelData2;
-
-		let	minPix = this.minPixelValue,
-			maxPix = this.maxPixelValue,
-
-			max = lut.max - 1;
-
-		let i = lut.min + 1;
-
-		while (i < max) {
-			let valueArr = pixelData2[i++];
-			if ( valueArr !== undefined ) {
-				let pixV = lutArr[ i + offset ];
-				let v = 0xFF000000 | (pixV << 16) | (pixV << 8) | pixV;
-				for (let j = 0, l = valueArr.length; j < l; j++)
-					imgDataBuffer[ valueArr[j] ] = v;
-			}
-		}
-
-		while (i <= maxPix) {
-			let valueArr = pixelData2[i++];
-			if ( valueArr !== undefined) {
-				for (let j = 0, l = valueArr.length; j < l; j++)
-					imgDataBuffer[ valueArr[j] ] = 0xFFFFFFFFF;
-			}
-		}
-
-		context.putImageData(imgData, 0, 0);
-	}
-	*/
 }
 
 /*
