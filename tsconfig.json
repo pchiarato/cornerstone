@@ -10,7 +10,7 @@
         "noImplicitAny": false,
         "declaration": true,
         "pretty": true,
-        "outDir": "/home/ghetolay/git/RM_angular2/node_modules/cornerstone"
+        "outDir": "build"
     },
     "exclude": [
         "node_modules",

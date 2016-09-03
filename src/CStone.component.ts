@@ -3,8 +3,6 @@ import {
 	AfterViewInit, OnChanges, SimpleChange
 } from '@angular/core';
 
-import { SafeSanitization } from './pipes/SafeSanitization';
-
 import { Transform } from './transform';
 import { LUT, LUTRendering } from './lut';
 import { Image, ImageRendering } from './image';
@@ -34,7 +32,6 @@ declare var __zone_symbol__requestAnimationFrame: (Function) => number;
 	template: `
 		<canvas #canvas [style.transform]="cssTransform | safesan"></canvas>
 	`,
-	pipes: [ SafeSanitization ],
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
 
