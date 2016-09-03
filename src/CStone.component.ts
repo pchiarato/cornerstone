@@ -1,13 +1,13 @@
 import {
 	Component, Input, Output, ChangeDetectionStrategy, ViewChild, ElementRef, EventEmitter,
-	OnInit, AfterViewInit, OnChanges, SimpleChange
+	AfterViewInit, OnChanges, SimpleChange
 } from '@angular/core';
 
 import { SafeSanitization } from './pipes/SafeSanitization';
 
 import { Transform } from './transform';
-import { LUT, IdentityLUT } from './lut';
-import { Image } from './image';
+import { LUT, LUTRendering } from './lut';
+import { Image, ImageRendering } from './image';
 
 declare var __zone_symbol__requestAnimationFrame: (Function) => number;
 
@@ -32,7 +32,7 @@ declare var __zone_symbol__requestAnimationFrame: (Function) => number;
 		}
 	`],
 	template: `
-		<canvas #canvas [style.transform]="_transform.getCSSTransform() | safesan"></canvas>
+		<canvas #canvas [style.transform]="cssTransform | safesan"></canvas>
 	`,
 	pipes: [ SafeSanitization ],
 	changeDetection: ChangeDetectionStrategy.OnPush
@@ -47,7 +47,7 @@ declare var __zone_symbol__requestAnimationFrame: (Function) => number;
 
 	conclusion: must be sure it's worth it.
 */
-export class CStoneComponent implements OnInit, OnChanges, AfterViewInit {
+export class CStoneComponent implements OnChanges, AfterViewInit {
 
 	@ViewChild('canvas')
 	private canvasRef: ElementRef;
@@ -55,56 +55,62 @@ export class CStoneComponent implements OnInit, OnChanges, AfterViewInit {
 
 	// nativeElement: HTMLElement;
 
-	protected _lut: LUT = new IdentityLUT();
-	protected _transform = new Transform();
-	protected renderingFunc: Function;
-
-	@Input() set transform(transform: Transform) {
-		this._transform = transform || new Transform();
-	}
-	get transform() {
-		return this._transform;
-	}
-
-	@Input() set lut(lut: LUT) {
-		this._lut = lut || new IdentityLUT();
-	};
-	get lut() {
-		return this._lut;
-	}
-
+	@Input() transform: Transform;
+	@Input() lut: LUT;
 	@Input() image: Image;
 
 	@Output() render = new EventEmitter();
 
-	private isDrawing = false;
-	private needRedraw = false;
+	protected isDrawing = false;
+	protected needRedraw = false;
 
-	constructor() {}
+	protected renderingFunc: Function;
 
-	private buildRenderingFunc() {
-		this.renderingFunc = new Function('img', 'lut', 'imgData',
-			this.image.renderingBuilder.getInitStatements() +
-			this.lut.renderingBuilder.getInitStatements() +
-			this.image.renderingBuilder.getLoopStatements( this.lut.renderingBuilder.getApplyStatements() )
-		);
-	}
+	protected prevImageRendering: ImageRendering;
+	protected prevLutRendering: LUTRendering;
 
-	drawImage() {
-		if (this.isDrawing)
-			this.needRedraw = true;
-		else {
-			this.isDrawing = true;
-			this.draw();
+	protected buildRenderingFunc() {
+		// don't need to test if this.lut exist because setters prevent it to be undefined when an image is set
+		if (this.image) {
+			if (!this.lut)
+				this.lut = this.image.getDefaultLUT();
+
+			let imgRendering = this.image.renderingBuilder,
+				lutRendering = this.lut.renderingBuilder;
+
+			if (imgRendering !== this.prevImageRendering || lutRendering !== this.prevLutRendering) {
+				this.renderingFunc = new Function('img', 'lut', 'imgData',
+					imgRendering.getInitStatements() +
+					lutRendering.getInitStatements() +
+					imgRendering.getLoopStatements( lutRendering.getApplyStatements() )
+				);
+
+				this.prevImageRendering = imgRendering;
+				this.prevLutRendering = lutRendering;
+			}
 		}
 	}
 
-	private draw() {
+	get cssTransform() {
+		return this.transform ? this.transform.getCSSTransform() : '';
+	}
+
+	drawImage() {
+		if (this.canvas) {
+			if (this.isDrawing)
+				this.needRedraw = true;
+			else {
+				this.isDrawing = true;
+				this.draw();
+			}
+		}
+	}
+
+	protected draw() {
 		__zone_symbol__requestAnimationFrame( () => {
 			let context = this.canvas.getContext('2d');
 
 			if (this.image) {
-
 				// TODO Modifing canvas size clear the canvas so be sure renderer will redraw it (invalidated parameter ?)
 				if (this.canvas.width !== this.image.width)
 					this.canvas.width = this.image.width;
@@ -113,7 +119,7 @@ export class CStoneComponent implements OnInit, OnChanges, AfterViewInit {
 
 				let imgData = context.createImageData(this.canvas.width, this.canvas.height);
 
-				this.renderingFunc(this.image, this._lut, imgData.data);
+				this.renderingFunc(this.image, this.lut, imgData);
 
 				context.putImageData(imgData, 0, 0);
 
@@ -143,39 +149,20 @@ export class CStoneComponent implements OnInit, OnChanges, AfterViewInit {
 		});
 	}
 
-	ngOnChanges(changes: { [propName: string]: SimpleChange }) {}
+	ngOnChanges(changes: { [propName: string]: SimpleChange }) {
+		let lut = changes['lut'],
+			image = changes['image'];
 
-	ngOnInit() {
-		this.ngOnChanges = (changes: { [propName: string]: SimpleChange }) => {
-			let lut = changes['lut'],
-				image = changes['image'];
-
-			if (lut || image) {
-				if ((
-						// image has changed
-						image &&
-						// we have set an actual image (not null)
-						image.currentValue &&
-						// we  didn't had an image previously set or renderingBuilder differ from previous image
-						(!image.previousValue || image.currentValue.renderingBuilder !== image.previousValue.rendereringBuilder )
-					) ||
-					(
-						// lut has changed
-						lut &&
-						// 	no need to test if lut.currentValue nor lut.previousValue are not null because setter prevents it
-
-						// renderingBuilder differ from previous
-						lut.currentValue.renderingBuilder !== lut.previousValue.renderingBuilder
-					))
-						this.buildRenderingFunc();
-				this.drawImage();
-			}
-		};
+		if (lut || image) {
+			this.buildRenderingFunc();
+			this.drawImage();
+		}
 	}
 
 	ngAfterViewInit() {
 		this.canvas = this.canvasRef.nativeElement;
 
+		// drawImage() on first ngOnchanges() has failed because this.canvas was undefined
 		this.drawImage();
 	}
 }

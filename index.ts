@@ -4,3 +4,4 @@ export * from './src/matrix';
 export * from './src/transform';
 
 export * from './src/CStone.component';
+export * from './src/preview.component';

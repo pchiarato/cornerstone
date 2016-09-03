@@ -68,7 +68,10 @@ export abstract class Image {
 	minPixelValue: number;
 	maxPixelValue: number;
 
+	// ImageData same size as Image, accurate rendering
 	renderingBuilder: ImageRendering;
+	// ImageData can be of any size and speed rendering over quality
+	previewBuilder: ImageRendering;
 
 	constructor(public pixelData: TypedArray, opt: ImageConstructor) {
 		for (let propName in opt)
@@ -210,6 +213,7 @@ export class GrayscaleImage extends Image {
 			return `
 				var pixelData = img.pixelData,
 
+					imgDataData = imgData.data,
 					i_imgData = 3,
 					i_pixelData = 0,
 					length = pixelData.length;
@@ -221,8 +225,40 @@ export class GrayscaleImage extends Image {
 				while (i_pixelData < length) {
 					var v = pixelData[i_pixelData++];
 					${lutStatements}
-					imgData[i_imgData] = v;
+					imgDataData[i_imgData] = v;
 					i_imgData += 4;
+				}
+			`;
+		}
+	};
+
+	static GrayscalePreviewRendering: ImageRendering = {
+		getInitStatements(): string {
+			return `
+				var pixelData = img.pixelData,
+
+					imgDataData = imgData.data,
+					i_imgData = 3,
+					i_pixelData = 0,
+					length = imgData.width*imgData.height,
+
+					x_ratio = img.width / imgData.width;
+					y_ratio = img.height / imgData.height;
+			`;
+		},
+
+		getLoopStatements(lutStatements: string): string {
+			return `
+				for(var y = 0; y < imgData.height; y++){
+					var y_pixel = Math.round(y * y_ratio) * img.width;
+
+					for(var x = 0; x < imgData.width; x++){
+						var v = pixelData[ Math.round(x * x_ratio) + y_pixel ];
+
+						${lutStatements}
+						imgDataData[ i_imgData ] = v;
+						i_imgData += 4;
+					}
 				}
 			`;
 		}
@@ -230,6 +266,10 @@ export class GrayscaleImage extends Image {
 
 	get renderingBuilder() {
 		return GrayscaleImage.GrayscaleImageRendering;
+	}
+
+	get previewBuilder() {
+		return GrayscaleImage.GrayscalePreviewRendering;
 	}
 
 	type = Type.GRAYSCALE;

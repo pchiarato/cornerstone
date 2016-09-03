@@ -72,7 +72,7 @@ export class IdentityLUT extends AbstractLUT implements LUT {
 	}
 };
 
-export class LinearLUT extends AbstractLUT implements LUT {
+export class LinearLUT extends AbstractLUT {
 
 	static LinearLUTRenderingBuilder: LUTRendering = {
 		getInitStatements: function(): string {
