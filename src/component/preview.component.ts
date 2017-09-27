@@ -9,6 +9,7 @@ import { scaleToFit } from './transform';
 
 declare var __zone_symbol__requestAnimationFrame: (Function) => number;
 
+
 @Component({
 	selector: 'cstone-preview',
 	styles: [`

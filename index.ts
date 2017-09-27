@@ -1,26 +1,36 @@
-import { NgModule }     from '@angular/core';
+import { NgModule } from '@angular/core';
 
-import { SafeSanitization } from './src/pipes/SafeSanitization';
+import { RenderersManager } from './src/renderer/manager';
+import { Image2DProviders } from './src/image/2d_renderer';
+import { ImageWebglProviders } from './src/image/webgl_renderer';
+import { Lut2DProviders, LutWebglProviders } from './src/lut';
 
-import { CStoneComponent } from './src/CStone.component';
-import { PreviewComponent } from './src/preview.component';
-
+import { ImageViewComponent } from './src/component/imageview.component';
 
 @NgModule({
 	declarations: [
-		CStoneComponent,
-		PreviewComponent,
-
-		SafeSanitization
+		ImageViewComponent
 	],
-	exports:  [
-		CStoneComponent,
-		PreviewComponent
+	providers: [
+		RenderersManager,
+
+		Image2DProviders,
+		ImageWebglProviders,
+
+		Lut2DProviders,
+		LutWebglProviders
+	],
+	exports: [
+		ImageViewComponent
 	]
 })
-export class CStoneModule {}
+export class HealthyModule {}
 
-export * from './src/image';
-export * from './src/lut';
-export * from './src/matrix';
-export * from './src/transform';
+export { Image } from './src/image';
+
+export { Lut, LutTypes } from './src/lut';
+export { InvertLut, IdentityLut } from './src/lut/invert';
+export { LinearLut } from './src/lut/linear';
+export { WindowingLut } from './src/lut/windowing';
+
+export { Transform } from './src/transform';

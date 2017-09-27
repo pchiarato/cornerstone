@@ -11,7 +11,7 @@
     "eofline": true,
     "indent": [
       true,
-      "tabs"
+      "space"
     ],
     "label-position": true,
     "label-undefined": true,
