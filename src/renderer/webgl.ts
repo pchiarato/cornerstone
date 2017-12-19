@@ -1,11 +1,13 @@
 import { InjectionToken } from '@angular/core';
-import { Image } from '../image';
-import { Renderer, RenderItem } from './';
-import { BaseLut, Lut } from '../lut';
-import { RenderersManager, Lookupable } from './manager';
-import { Subject } from 'rxjs/Subject';
+
 import { Observable } from 'rxjs/Observable';
 import { map } from 'rxjs/operator/map';
+import { Subject } from 'rxjs/Subject';
+
+import { Image } from '../image';
+import { BaseLut, Lut } from '../lut';
+import { Renderer, RenderItem } from './';
+import { Lookupable, RenderersManager } from './manager';
 
 export interface ImageRendererWebgl extends Lookupable<Image> {
     // TODO highp when available
@@ -73,6 +75,7 @@ function getHighpPrecision(gl: WebGLRenderingContext) {
 */
 
 // TODO make it faster for preview ?
+// TODO single webgl context on an offscreen canvas
 
 export class WebGLRenderer implements Renderer {
 
@@ -95,7 +98,12 @@ export class WebGLRenderer implements Renderer {
     }
 
     destroy() {
-		this.pipeline.unsubscribe();
+        this.pipeline.unsubscribe();
+
+        // TODO better way to clean
+        const extension = this.gl.getExtension('WEBGL_lose_context');
+        if (extension != null)
+            extension.loseContext();
 	}
 
     protected render({image, luts}: RenderItem) {
