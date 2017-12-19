@@ -1,6 +1,18 @@
-import { BaseLut } from '../lut';
+import { Observable } from 'rxjs/Observable';
+
+import { Lut } from '../lut';
 import { Image } from '../image';
 
 export interface Renderer {
-    draw(image?: Image, lut?: BaseLut[]): void;
+
+    output: Observable<Error | Image>;
+
+    draw(image: Image, luts?: Lut[]): void;
+
+    destroy(): void;
+}
+
+export interface RenderItem {
+	image: Image;
+	luts: Lut[];
 }

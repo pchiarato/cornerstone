@@ -15,7 +15,7 @@ export const WindowingLut = {
 	isCompatible: (image: Image) => image.components === 1
 }
 
-export function WindowingLutRenderer2D(): LutRenderer2D<WindowingLut> {
+export function WindowingLutRenderer2D(): LutRenderer2D {
 	return {
         match: WindowingLut.match,
 
@@ -45,7 +45,7 @@ export interface ThresholdWindowingLut extends WindowingLut {
     width: 1;
 }
 
-export function ThresholdWindowingLutRenderer2D(): LutRenderer2D<ThresholdWindowingLut> {
+export function ThresholdWindowingLutRenderer2D(): LutRenderer2D {
     return {
         match: (lut: BaseLut): lut is ThresholdWindowingLut =>
             lut && (<ThresholdWindowingLut>lut).center !== undefined && (<ThresholdWindowingLut>lut).width === 1,

@@ -6,10 +6,12 @@ import { ImageWebglProviders } from './src/image/webgl_renderer';
 import { Lut2DProviders, LutWebglProviders } from './src/lut';
 
 import { ImageViewComponent } from './src/component/imageview.component';
+import { ImagePreviewComponent } from './src/component/preview.component';
 
 @NgModule({
 	declarations: [
-		ImageViewComponent
+		ImageViewComponent,
+		ImagePreviewComponent
 	],
 	providers: [
 		RenderersManager,
@@ -21,7 +23,8 @@ import { ImageViewComponent } from './src/component/imageview.component';
 		LutWebglProviders
 	],
 	exports: [
-		ImageViewComponent
+		ImageViewComponent,
+		ImagePreviewComponent
 	]
 })
 export class HealthyModule {}

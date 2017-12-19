@@ -1,5 +1,4 @@
 import { BaseLut, LutTypes } from './';
-import { Image } from '../image';
 import { LutRenderer2D } from '../renderer/2d';
 import { LutRendererWebgl } from '../renderer/webgl';
 
@@ -11,10 +10,10 @@ export interface InvertLut extends BaseLut {
 export const InvertLut = {
 	match: (lut: BaseLut): lut is InvertLut =>
 		lut.type === LutTypes.INVERSE && (<InvertLut>lut).invert !== false,
-	isCompatible: (image: Image) => true
+	isCompatible: () => true
 }
 
-export function InvertLutRenderer2D(): LutRenderer2D<InvertLut> {
+export function InvertLutRenderer2D(): LutRenderer2D {
     return {
         match: InvertLut.match,
 
@@ -44,10 +43,10 @@ export interface IdentityLut extends BaseLut {
 export const IdentityLut = {
 	match: (lut: BaseLut): lut is IdentityLut =>
 		lut.type === LutTypes.INVERSE && (<IdentityLut>lut).invert === false,
-	isCompatible: (image: Image) => true
+	isCompatible: () => true
 }
 
-export function IdentityLutRenderer2D(): LutRenderer2D<IdentityLut> {
+export function IdentityLutRenderer2D(): LutRenderer2D {
     return {
         match: IdentityLut.match,
 

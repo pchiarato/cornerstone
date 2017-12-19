@@ -1,104 +1,76 @@
-import {
-	Component, Input, ChangeDetectionStrategy, ViewChild, ElementRef,
-	AfterViewInit, OnChanges, SimpleChange
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 
-import { LUT, LUTRendering } from './lut';
-import { Image, ImageRendering } from './image';
-import { scaleToFit } from './transform';
+import { RenderersManager } from '../renderer/manager';
+import { AbtractView } from './view.abstract';
 
-declare var __zone_symbol__requestAnimationFrame: (Function) => number;
-
+// TODO harmonise names
+export enum STATUS {
+    valid = 'VALID',
+    no_renderer = 'NO_RENDERER',
+    rendering_error = 'RENDERING_ERROR',
+    invalid_image = 'INVALID_IMAGE'
+}
 
 @Component({
-	selector: 'cstone-preview',
-	styles: [`
+    selector: 'img-preview',
+    template: '<canvas #canvas></canvas>',
+    styles: [`
 		canvas{
 			background: white;
+			vertical-align: top;
 		}
 	`],
-	template: `
-		<canvas #canvas></canvas>
-	`,
-	changeDetection: ChangeDetectionStrategy.OnPush
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
+export class ImagePreviewComponent extends AbtractView implements OnChanges {
 
-// TODO create a base class for this and CStoneComponent
-export class PreviewComponent implements OnChanges, AfterViewInit {
+	@Input() width: number | undefined;
+    @Input() height: number | undefined;
 
-	@Input() maxWidth =  256;
-	@Input() maxHeight = 256;
+    /* fit or none
+        default => fit, wrong value => none
+    */
+    @Input() scaleStrategy = 'fit';
 
-	@Input() image: Image;
-	@Input() lut: LUT;
-
-	@ViewChild('canvas')
-	private canvasRef: ElementRef;
-
-	protected renderingFunc: Function;
-
-	protected prevImageRendering: ImageRendering;
-	protected prevLutRendering: LUTRendering;
-
-	protected buildRenderingFunc() {
-		// don't need to test if this.lut exist because setters prevent it to be undefined when an image is set
-		if (this.image) {
-			if (!this.lut)
-				this.lut = this.image.getDefaultLUT();
-
-			let imgRendering = this.image.previewBuilder,
-				lutRendering = this.lut.renderingBuilder;
-
-			if (imgRendering !== this.prevImageRendering || lutRendering !== this.prevLutRendering) {
-				this.renderingFunc = new Function('img', 'lut', 'imgData',
-					imgRendering.getInitStatements() +
-					lutRendering.getInitStatements() +
-					imgRendering.getLoopStatements( lutRendering.getApplyStatements() )
-				);
-
-				this.prevImageRendering = imgRendering;
-				this.prevLutRendering = lutRendering;
-			}
-		}
+    constructor(rendering: RenderersManager) {
+		super(rendering);
 	}
 
-	ngOnChanges(changes: { [propName: string]: SimpleChange }) {
-		if (changes['image'] || changes['lut'])
-			this.buildRenderingFunc();
+    ngOnChanges(changes: SimpleChanges) {
+        const renderer = this.getRenderer();
+        if (renderer === undefined) return;
 
-		this.draw();
-	}
+		let sizeChanged = false;
+        if ('image' in changes || 'width' in changes || 'height' in changes || 'scaleStrategy' in changes) {
+            const canvas = this.canvas;
+            if (this.image != null) {
+                let width = this.width || this.image.width;
+                let height = this.height || this.image.height;
 
-	ngAfterViewInit() {
-		this.draw();
-	}
+                if (this.scaleStrategy === 'fit') {
+                    let ratio = this.image.width / this.image.height;
+                    if (ratio > 1) {
+                        height = width / ratio;
+                    }
+                    else {
+                        width = height * ratio;
+                    }
+                }
 
-	draw() {
-		if (this.canvasRef.nativeElement) {
-			let canvas = this.canvasRef.nativeElement,
-				context = canvas.getContext('2d');
+				if (canvas.width !== width || canvas.height !== height) {
+					// always set both canvas value to avoid bugs
+					canvas.width = width;
+					canvas.height = height;
+					sizeChanged = true;
+				}
+            }
+            else
+                canvas.width = canvas.height = 0;
+        }
 
-			if (this.image) {
-				let scale = scaleToFit(this.maxWidth, this.maxHeight, this.image),
-					width =  Math.floor(this.image.width  * scale),
-					height = Math.floor(this.image.height * scale);
-
-				canvas.width = width;
-				canvas.height = height;
-
-				let imgData = context.createImageData(width, height);
-				this.renderingFunc(this.image, this.lut, imgData);
-				context.putImageData(imgData, 0, 0);
-
-			}
-			else {
-				canvas.width = this.maxWidth;
-				canvas.height = this.maxHeight;
-
-				context.fillStyle = '#000';
-				context.fillRect(0, 0, canvas.width, canvas.height);
-			}
-		}
-	}
-
+        // TODO if there is an error during update and we're using webgl renderer
+        // => fallback to 2d renderer
+        if ('image' in changes || 'lut' in changes || sizeChanged)
+            renderer.draw(this.image, this.luts);
+    }
 }

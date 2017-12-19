@@ -15,7 +15,7 @@ export const LinearLut = {
 	isCompatible: (image: Image) => image.components === 1
 }
 
-export function LinearLutRenderer2D(): LutRenderer2D<LinearLut> {
+export function LinearLutRenderer2D(): LutRenderer2D {
     return {
         match: LinearLut.match,
 

@@ -1,11 +1,11 @@
-export interface Coord2D {
+export interface Vec2 {
     x: number;
     y: number;
 }
 
 export interface Transform {
     scale?: number;
-	translation?: Coord2D;
+	translation?: Vec2;
 	rotation?: number;
 	hflip?: boolean
 	vflip?: boolean

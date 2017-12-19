@@ -1,4 +1,4 @@
-import { Injectable, Inject, Injector } from '@angular/core';
+import { Injectable, Injector } from '@angular/core';
 import { Image } from '../image';
 import { BaseLut, Lut, } from '../lut';
 import { ImageRenderer2D, IMAGE_RENDERER_2D, LutRenderer2D, LUT_RENDERER_2D } from './2d';
@@ -27,7 +27,7 @@ export class RenderersManager {
             this._image2D;
     }
 
-    private _Luts2D: LutRenderer2D<Lut>[];
+    private _Luts2D: LutRenderer2D[];
     get luts2D() {
         return this._Luts2D === undefined ?
             this._Luts2D = this.injector.get(LUT_RENDERER_2D) :
@@ -54,7 +54,7 @@ export class RenderersManager {
         return this.getRenderers(image, luts, this.imagesWebgl, this.lutsWebgl);
     }
 
-    /* The renderingFunction stuff should be part of 2D renderer but since we need to cache
+    /* The renderingFunction stuff should be part of 2D renderer but since we need to cache it
      * we moved it here (singleton service)
      */
     get2DRenderingFunction(image: Image, luts: Lut[]) {
@@ -62,8 +62,13 @@ export class RenderersManager {
         let func = this.renderingFuncCache[id];
 
         if (func === undefined) {
-            const args = ['img', 'imgData'];
-            let functionBody = imageRenderer.initStatements;
+            const args = ['image', 'display'];
+            let functionBody = `
+                var imageData = image.pixelData,
+                    imagelength = imageData.length
+                    displayData = display.data,
+                    displayLength = displayData.length;
+            `;
             let transformsStatements = '';
 
             for (let lutRenderer of lutRenderers) {
@@ -84,7 +89,7 @@ export class RenderersManager {
 
     // util static funcs
 
-    private getRenderers<T extends Lut, R extends ImageRenderer2D | ImageRendererWebgl, S extends LutRenderer2D<T> | LutRendererWebgl<T>>
+    private getRenderers<T extends Lut, R extends ImageRenderer2D | ImageRendererWebgl, S extends LutRenderer2D | LutRendererWebgl<T>>
         (image: Image, luts: T[], imageRenderers: R[], lutRenderers: S[]): [number, R, S[]] {
 
         const [imgIdx, imageRenderer] = this.lookup(image, imageRenderers, InvalidImageError);

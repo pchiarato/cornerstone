@@ -1,78 +1,78 @@
 import { InjectionToken } from '@angular/core';
-import { Transform } from '../transform';
-import { BaseLut, Lut } from '../lut';
+import {  Lut } from '../lut';
 import { Image } from '../image';
 import { RenderersManager, Lookupable } from './manager';
-import { Renderer } from './';
+import { Renderer, RenderItem } from './';
+import { Subscriber } from 'rxjs/Subscriber';
+import { Observable } from 'rxjs/Observable';
+import { Subject } from 'rxjs/Subject';
+import { auditMap } from '../auditMap';
 
 declare var __zone_symbol__requestAnimationFrame: (f: Function) => number;
 
 export interface ImageRenderer2D extends Lookupable<Image> {
-	initStatements: string;
 	loopStatements: (transformStatements: string) => string;
 }
 
 export const IMAGE_RENDERER_2D = new InjectionToken<ImageRenderer2D[]>('Image 2D Renderer');
 
-export interface LutRenderer2D<T extends Lut> extends Lookupable<Lut> {
+export interface LutRenderer2D extends Lookupable<Lut> {
 	argName: string;
 	initStatements: string;
 	transformStatements: string;
 }
 
-export const LUT_RENDERER_2D = new InjectionToken<LutRenderer2D<Lut>[]>('Lut renderer 2d');
+export const LUT_RENDERER_2D = new InjectionToken<LutRenderer2D[]>('Lut renderer 2d');
 
 export class Canvas2DRenderer implements Renderer {
 
-	protected isDrawing = false;
-	protected nextDraw: [Image, BaseLut[]] | null = null;
+	private context: CanvasRenderingContext2D;
 
-	protected renderingFunc: Function;
+	private pipeline = new Subject<RenderItem>();
 
-	constructor(private context: CanvasRenderingContext2D, private rendering: RenderersManager) {}
+	// TODO check that auditMap actually works... got overdose
+	output: Observable<Error | Image> = auditMap.call(this.pipeline, ({image, luts}: RenderItem) => this.render(image, luts) );
 
-	refresh(image: Image, luts: BaseLut[]) {
-		if (this.isDrawing)
-			// only keep the last image/lut to be drawn
-			this.nextDraw = [image, luts];
-		else
-			this._refresh(image, luts);
+	constructor(private canvas: HTMLCanvasElement, private rendering: RenderersManager) {
+		const context = canvas.getContext('2d');
+
+		if (!context)
+			throw 'no 2d context';
+
+		this.context = context;
 	}
 
-	protected _refresh(image: Image, luts: BaseLut[]) {
-		this.isDrawing = true;
+	private render(image: Image, luts: Lut[]): Observable<Image> {
+		// TODO scheduler ??
+		return Observable.create( (observer: Subscriber<Image>) => {
+			// run outside Angular zone
+			const id = __zone_symbol__requestAnimationFrame( () => {
+				try {
+					let imgData = this.context.createImageData(this.canvas.width, this.canvas.height);
 
-		// run outside Angular zone
-		__zone_symbol__requestAnimationFrame( () => {
-			let imgData = this.context.createImageData(image.width, image.height);
+					// TODO can we avoid that in some cases ?
+					this.rendering.get2DRenderingFunction(image, luts)
+						.apply(null, [image, imgData, ...luts]);
 
-			this.renderingFunc.apply(null, [image, imgData, ...luts]);
+					this.context.putImageData(imgData, 0, 0);
 
-			this.context.putImageData(imgData, 0, 0);
+					observer.next(image);
+				} catch (e) {
+					observer.next(e);
+				}
 
-			// Rendering loop
-			if (this.nextDraw !== null) {
-				const drawArgs = this.nextDraw;
-				this.nextDraw = null;
+				observer.complete();
+			});
 
-				this._refresh.apply(this, drawArgs);
-			}
-			else {
-				this.isDrawing = false;
-			}
+			return () => { cancelAnimationFrame(id); }
 		});
 	}
 
-	draw(image?: Image, luts = []) {
-		if ( image !== undefined ) {
-			this.renderingFunc = this.rendering.get2DRenderingFunction(image, luts);
-			this.refresh(image, luts);
-		}
-		/* else canvas has width = height = 0 so don't need to bother
-		else {
-			this.context.fillStyle = '#000';
-			this.context.fillRect(0, 0, canvas.width, canvas.height);
-		}
-		*/
+	draw(image: Image, luts = []) {
+		this.pipeline.next({image, luts});
+	}
+
+	destroy() {
+		this.pipeline.unsubscribe();
 	}
 }

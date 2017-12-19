@@ -1,8 +1,11 @@
-import { InjectionToken, SimpleChange } from '@angular/core';
+import { InjectionToken } from '@angular/core';
 import { Image } from '../image';
-import { Renderer } from './';
+import { Renderer, RenderItem } from './';
 import { BaseLut, Lut } from '../lut';
 import { RenderersManager, Lookupable } from './manager';
+import { Subject } from 'rxjs/Subject';
+import { Observable } from 'rxjs/Observable';
+import { map } from 'rxjs/operator/map';
 
 export interface ImageRendererWebgl extends Lookupable<Image> {
     // TODO highp when available
@@ -57,6 +60,7 @@ const vertShader = `
 `;
 
 // TODO use it
+/*
 function getHighpPrecision(gl: WebGLRenderingContext) {
     if (gl.getShaderPrecisionFormat) {
         const precisionFormat = gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT);
@@ -66,6 +70,9 @@ function getHighpPrecision(gl: WebGLRenderingContext) {
 
     return 0;
 }
+*/
+
+// TODO make it faster for preview ?
 
 export class WebGLRenderer implements Renderer {
 
@@ -75,13 +82,24 @@ export class WebGLRenderer implements Renderer {
     private shaderCache: {[id: number]: WebGLProgram} = {};
     private shader: WebGLProgram;
 
+    private pipeline = new Subject<RenderItem>();
+
+    output: Observable<Error | Image> = map.call(this.pipeline, (item: RenderItem) => this.render(item));
+
     constructor(private gl: WebGLRenderingContext, private rendering: RenderersManager) {
          this.initTexture();
     }
 
-    // TODO I think typings should be draw<T extends Lut>(image?: Image, lut: T = NoLut)
-    draw(image?: Image, luts = []) {
-        if (image !== undefined) {
+    draw(image: Image, luts = []) {
+        this.pipeline.next({image, luts})
+    }
+
+    destroy() {
+		this.pipeline.unsubscribe();
+	}
+
+    protected render({image, luts}: RenderItem) {
+        try {
             const [id, imageRenderer, lutsRenderer] = this.rendering.getWebglRenderers(image, luts);
             const newShader = this.setShaderProgram(id, imageRenderer, lutsRenderer);
 
@@ -98,17 +116,17 @@ export class WebGLRenderer implements Renderer {
                 imageRenderer.buildTexture(this.gl, image);
             }
 
-            this.refresh();
+            // this was previously outside the if(image !== undefined)
+            this.image = image;
+            this.luts = luts;
+
+            // TODO protect against too much refresh call
+            this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+
+            return image;
+        } catch (e) {
+            return e;
         }
-        // else canvas has been resize so drawing is already cleared
-
-        this.image = image;
-        this.luts = luts;
-    }
-
-    // TODO protect against too much refresh call
-    private refresh() {
-      this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
     }
 
     private initTexture() {
