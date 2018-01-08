@@ -13,25 +13,21 @@ export const InvertLut = {
 	isCompatible: () => true
 }
 
-export function InvertLutRenderer2D(): LutRenderer2D {
-    return {
-        match: InvertLut.match,
+export const InvertLutRenderer2D: LutRenderer2D = {
+    match: InvertLut.match,
 
-        argName: 'invertLut',
-        initStatements: '',
-        transformStatements: 'v = 255 - v;',
-    };
+    argName: 'invertLut',
+    initStatements: '',
+    transformStatements: 'v = 255 - v;',
 }
 
-export function InvertLutRendererWebgl(): LutRendererWebgl<InvertLut> {
-    return {
-        match: InvertLut.match,
+export const InvertLutRendererWebgl: LutRendererWebgl<InvertLut> = {
+    match: InvertLut.match,
 
-        initShaderStatements: '',
-        // TODO probably more efficient way to do that
-        transformShaderStatements: 'v = vec4(255. - v.r, 255. - v.g, 255. - v.b, v.a);',
-        updateValues: () => { }
-    };
+    initShaderStatements: '',
+    // TODO probably more efficient way to do that
+    transformShaderStatements: 'v = vec4(255. - v.r, 255. - v.g, 255. - v.b, v.a);',
+    updateValues: () => { }
 }
 
 /************ Identity (special invert) ************/
@@ -46,23 +42,19 @@ export const IdentityLut = {
 	isCompatible: () => true
 }
 
-export function IdentityLutRenderer2D(): LutRenderer2D {
-    return {
-        match: IdentityLut.match,
+export const IdentityLutRenderer2D: LutRenderer2D = {
+    match: IdentityLut.match,
 
-        argName: 'identityLut',
-        initStatements: '',
-        transformStatements: '',
-    };
+    argName: 'identityLut',
+    initStatements: '',
+    transformStatements: ''
 }
 
-export function IdentityLutRendererWebgl(): LutRendererWebgl<IdentityLut> {
-    return {
-        match: IdentityLut.match,
+export const IdentityLutRendererWebgl: LutRendererWebgl<IdentityLut> = {
+    match: IdentityLut.match,
 
-        initShaderStatements: '',
-        transformShaderStatements: '',
-        updateValues: () => { }
-    };
+    initShaderStatements: '',
+    transformShaderStatements: '',
+    updateValues: () => { }
 }
 

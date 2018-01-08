@@ -15,27 +15,23 @@ export const LinearLut = {
 	isCompatible: (image: Image) => image.components === 1
 }
 
-export function LinearLutRenderer2D(): LutRenderer2D {
-    return {
-        match: LinearLut.match,
+export const LinearLutRenderer2D: LutRenderer2D = {
+    match: LinearLut.match,
 
-        argName: 'linearLut',
-        initStatements: 'var slope = linearLut.slope, intercept = linearLut.intercept',
-        transformStatements: 'v = v * slope + intercept'
-    };
+    argName: 'linearLut',
+    initStatements: 'var slope = linearLut.slope, intercept = linearLut.intercept',
+    transformStatements: 'v = v * slope + intercept'
 }
 
-export function LinearLutRendererWebgl(): LutRendererWebgl<LinearLut> {
-    return {
-        match: LinearLut.match,
+export const LinearLutRendererWebgl: LutRendererWebgl<LinearLut> = {
+    match: LinearLut.match,
 
-        initShaderStatements: 'uniform vec2 u_lut;',
-        transformShaderStatements: 'v = v * u_lut.x + u_lut.y;',
-        updateValues: (gl: WebGLRenderingContext, program: WebGLProgram, lut: LinearLut) => {
-            const lutLocation = gl.getUniformLocation(program, 'u_lut');
-            if (lutLocation === -1) console.error('unable to get attribute u_lut');
+    initShaderStatements: 'uniform vec2 u_lut;',
+    transformShaderStatements: 'v = v * u_lut.x + u_lut.y;',
+    updateValues: (gl: WebGLRenderingContext, program: WebGLProgram, lut: LinearLut) => {
+        const lutLocation = gl.getUniformLocation(program, 'u_lut');
+        if (lutLocation === -1) console.error('unable to get attribute u_lut');
 
-            gl.uniform2f(lutLocation, lut.slope, lut.intercept);
-        }
-    };
+        gl.uniform2f(lutLocation, lut.slope, lut.intercept);
+    }
 }

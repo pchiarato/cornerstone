@@ -19,30 +19,58 @@ export const enum LutTypes {
 
 export type Lut = IdentityLut | InvertLut | LinearLut | WindowingLut;
 
-export const Lut2DProviders: Provider[] =
-	[
-		IdentityLutRenderer2D,
-		InvertLutRenderer2D,
-		LinearLutRenderer2D,
-		WindowingLutRenderer2D,
-		ThresholdWindowingLutRenderer2D
-	]
-	.map( f => ({
-			provide: LUT_RENDERER_2D,
-			multi: true,
-			useFactory: f
-	}) );
+export const Lut2DProviders: Provider[] = [
+	{
+		provide: LUT_RENDERER_2D,
+		multi: true,
+		useValue: IdentityLutRenderer2D
+	},
+	{
+		provide: LUT_RENDERER_2D,
+		multi: true,
+		useValue: InvertLutRenderer2D
+	},
+	{
+		provide: LUT_RENDERER_2D,
+		multi: true,
+		useValue: LinearLutRenderer2D
+	},
+	{
+		provide: LUT_RENDERER_2D,
+		multi: true,
+		useValue: WindowingLutRenderer2D
+	},
+	{
+		provide: LUT_RENDERER_2D,
+		multi: true,
+		useValue: ThresholdWindowingLutRenderer2D
+	}
+];
 
-export const LutWebglProviders: Provider[] =
-	[
-		IdentityLutRendererWebgl,
-		InvertLutRendererWebgl,
-		LinearLutRendererWebgl,
-		WindowingLutRendererWebgl,
-		ThresholdWindowingLutRendererWebgl
-	]
-	.map( f => ({
-			provide: LUT_RENDERER_WEBGL,
-			multi: true,
-			useFactory: f
-	}) );
+export const LutWebglProviders: Provider[] = [
+	{
+		provide: LUT_RENDERER_WEBGL,
+		multi: true,
+		useValue: IdentityLutRendererWebgl
+	},
+	{
+		provide: LUT_RENDERER_WEBGL,
+		multi: true,
+		useValue: InvertLutRendererWebgl
+	},
+	{
+		provide: LUT_RENDERER_WEBGL,
+		multi: true,
+		useValue: LinearLutRendererWebgl
+	},
+	{
+		provide: LUT_RENDERER_WEBGL,
+		multi: true,
+		useValue: WindowingLutRendererWebgl
+	},
+	{
+		provide: LUT_RENDERER_WEBGL,
+		multi: true,
+		useValue: ThresholdWindowingLutRendererWebgl
+	}
+];

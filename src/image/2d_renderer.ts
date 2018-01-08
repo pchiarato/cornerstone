@@ -10,53 +10,64 @@ import { ImageRenderer2D, IMAGE_RENDERER_2D } from '../renderer/2d';
  *  color => r,g,b
  */
 
-function Grayscale(): ImageRenderer2D {
-    return {
-        match: (image: Image) => image.components === 1,
+export class GrayscaleRenderer implements ImageRenderer2D {
+    match(image: Image) { return image.components === 1 }
 
-        loopStatements(transformStatements: string) {
-            // ~~ is not much faster nowaday but it's not slower either so keep it for older browsers.
-            return `
-                var displayIndex = 3,
-                    scale = Math.min(image.width / display.width, image.height / display.height);
-                if (scale === 1) {
-                    var imageIndex = 0;
-                    while (displayIndex < displayLength) {
-                        var v = imageData[imageIndex];
+    loopStatements(transformStatements: string) {
+        // ~~ is not much faster nowaday but it's not slower either so keep it for older browsers.
+        return `
+            var displayIndex = 3,
+                scale = Math.min(image.width / display.width, image.height / display.height);
+            if (scale === 1) {
+                var imageIndex = 0;
+                while (displayIndex < displayLength) {
+                    var v = imageData[imageIndex];
+                    ${transformStatements}
+                    displayData[displayIndex] = 255 - v;
+                    displayIndex += 4;
+                    imageIndex ++;
+                }
+            }
+            else
+                for (var y = 0, yl = display.height; y < yl; y++) {
+                    for (var x = 0, xl = display.width; x < xl; x++) {
+                        var v = imageData[ ~~(y*scale)*image.width + ~~(x*scale) ];
                         ${transformStatements}
-                        displayData[displayIndex] = 255 - v;
+                        displayData[ displayIndex ] = 255 - v;
                         displayIndex += 4;
-                        imageIndex ++;
                     }
                 }
-                else
-                    for (var y = 0, yl = display.height; y < yl; y++) {
-                        for (var x = 0, xl = display.width; x < xl; x++) {
-                            var v = imageData[ ~~(y*scale)*image.width + ~~(x*scale) ];
-                            ${transformStatements}
-                            displayData[ displayIndex ] = 255 - v;
-                            displayIndex += 4;
-                        }
-                    }
-            `;
-        }
-    };
+        `;
+    }
 }
 
-function Color(): ImageRenderer2D {
-    return {
-        match: (image: Image) => image.components === 3,
+export class ColorRenderer implements ImageRenderer2D {
+    match(image: Image) { return image.components === 3 }
 
-        loopStatements(transformStatements: string) {
-            return `
-                var displayIndex = 0,
-                    scale = Math.min(image.width / display.width, image.height / display.height);
-                if (scale === 1) {
-                    var imageIndex = 0;
-                    while (displayIndex < displayLength) {
+    loopStatements(transformStatements: string) {
+        return `
+            var displayIndex = 0,
+                scale = Math.min(image.width / display.width, image.height / display.height);
+            if (scale === 1) {
+                var imageIndex = 0;
+                while (displayIndex < displayLength) {
+                    var r = imageData[imageIndex++],
+                        g = imageData[imageIndex++],
+                        b = imageData[imageIndex++];
+                    ${transformStatements}
+                    displayData[displayIndex++] = r;
+                    displayData[displayIndex++] = g;
+                    displayData[displayIndex++] = b;
+                    displayData[displayIndex++] = 255;
+                }
+            }
+            else {
+                for (var y = 0, yl = display.height; y < yl; y++) {
+                    for (var x = 0, xl = display.width; x < xl; x++) {
+                        var imageIndex = (~~(y*scale)*image.width + ~~(x*scale))*3;
                         var r = imageData[imageIndex++],
                             g = imageData[imageIndex++],
-                            b = imageData[imageIndex++];
+                            b = imageData[imageIndex];
                         ${transformStatements}
                         displayData[displayIndex++] = r;
                         displayData[displayIndex++] = g;
@@ -64,35 +75,20 @@ function Color(): ImageRenderer2D {
                         displayData[displayIndex++] = 255;
                     }
                 }
-                else {
-                    for (var y = 0, yl = display.height; y < yl; y++) {
-                        for (var x = 0, xl = display.width; x < xl; x++) {
-                            var imageIndex = (~~(y*scale)*image.width + ~~(x*scale))*3;
-                            var r = imageData[imageIndex++],
-                                g = imageData[imageIndex++],
-                                b = imageData[imageIndex];
-                            ${transformStatements}
-                            displayData[displayIndex++] = r;
-                            displayData[displayIndex++] = g;
-                            displayData[displayIndex++] = b;
-                            displayData[displayIndex++] = 255;
-                        }
-                    }
-                }
-            `;
-        }
-    };
+            }
+        `;
+    }
 }
 
-// we use factory function and not value directly so it can be lazy loaded
-// TODO same could be achieve with classes, would it be better ?
-export const Image2DProviders: Provider[] =
-    [
-        Grayscale,
-        Color
-    ]
-    .map(f => ({
+export const Image2DProviders: Provider[] = [
+    {
         provide: IMAGE_RENDERER_2D,
         multi: true,
-        useFactory: f
-    }) );
+        useClass: GrayscaleRenderer
+    },
+    {
+        provide: IMAGE_RENDERER_2D,
+        multi: true,
+        useClass: ColorRenderer
+    }
+];
