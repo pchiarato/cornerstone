@@ -2,10 +2,10 @@ import { Provider } from '@angular/core';
 import { Image } from './';
 import { ImageRendererWebgl, IMAGE_RENDERER_WEBGL } from '../renderer/webgl';
 
-export class GrayscaleUint16Renderer implements ImageRendererWebgl {
-    colorStatements = 'float color = t.r*255.0 + t.a*255.*256.; v = vec4(color, color, color, 255.);';
+export const GrayscaleUint16Renderer: ImageRendererWebgl = {
+    colorStatements: 'float color = t.r*255.0 + t.a*255.*256.; v = vec4(color, color, color, 255.);',
 
-    match(image: Image) { return image.components === 1 && image.pixelData instanceof Uint16Array }
+    match(image: Image) { return image.components === 1 && image.pixelData instanceof Uint16Array },
 
     // webgl
     buildTexture(gl: WebGLRenderingContext, image: Image) {
@@ -17,14 +17,14 @@ export class GrayscaleUint16Renderer implements ImageRendererWebgl {
     }
 }
 
-export class GrayscaleInt16Renderer implements ImageRendererWebgl {
-    colorStatements = `
+export const GrayscaleInt16Renderer: ImageRendererWebgl = {
+    colorStatements: `
         float color = t.r*255.0 + t.a*255.*256.;
         if(color > 32767.) color = color - 65536.;
         v = vec4(color, color, color, 255.);
-    `
+    `,
 
-    match(image: Image) { return image.components === 1 && image.pixelData instanceof Int16Array }
+    match(image: Image) { return image.components === 1 && image.pixelData instanceof Int16Array },
 
     // webgl
     buildTexture(gl: WebGLRenderingContext, image: Image) {
@@ -36,12 +36,12 @@ export class GrayscaleInt16Renderer implements ImageRendererWebgl {
     }
 }
 
-export class ColorUint8Renderer implements ImageRendererWebgl {
-    colorStatements: 'v = vec4(t.r*255., t.g*255., t.b*255., 255.);'
+export const ColorUint8Renderer: ImageRendererWebgl = {
+    colorStatements: 'v = vec4(t.r*255., t.g*255., t.b*255., 255.);',
 
     match(image: Image) { return image.components === 3 &&
         (image.pixelData instanceof Uint8Array || image.pixelData instanceof Uint8ClampedArray)
-    }
+    },
 
     // webgl
     buildTexture(gl: WebGLRenderingContext, image: Image) {
@@ -65,16 +65,16 @@ export const ImageWebglProviders: Provider[] = [
     {
         provide: IMAGE_RENDERER_WEBGL,
         multi: true,
-        useClass: GrayscaleUint16Renderer
+        useValue: GrayscaleUint16Renderer
     },
     {
         provide: IMAGE_RENDERER_WEBGL,
         multi: true,
-        useClass: GrayscaleInt16Renderer
+        useValue: GrayscaleInt16Renderer
     },
     {
         provide: IMAGE_RENDERER_WEBGL,
         multi: true,
-        useClass: ColorUint8Renderer
+        useValue: ColorUint8Renderer
     }
 ];

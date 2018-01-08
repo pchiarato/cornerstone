@@ -10,8 +10,8 @@ import { ImageRenderer2D, IMAGE_RENDERER_2D } from '../renderer/2d';
  *  color => r,g,b
  */
 
-export class GrayscaleRenderer implements ImageRenderer2D {
-    match(image: Image) { return image.components === 1 }
+export const GrayscaleRenderer: ImageRenderer2D = {
+    match(image: Image) { return image.components === 1 },
 
     loopStatements(transformStatements: string) {
         // ~~ is not much faster nowaday but it's not slower either so keep it for older browsers.
@@ -41,8 +41,8 @@ export class GrayscaleRenderer implements ImageRenderer2D {
     }
 }
 
-export class ColorRenderer implements ImageRenderer2D {
-    match(image: Image) { return image.components === 3 }
+export const ColorRenderer: ImageRenderer2D = {
+    match(image: Image) { return image.components === 3 },
 
     loopStatements(transformStatements: string) {
         return `
@@ -84,11 +84,11 @@ export const Image2DProviders: Provider[] = [
     {
         provide: IMAGE_RENDERER_2D,
         multi: true,
-        useClass: GrayscaleRenderer
+        useValue: GrayscaleRenderer
     },
     {
         provide: IMAGE_RENDERER_2D,
         multi: true,
-        useClass: ColorRenderer
+        useValue: ColorRenderer
     }
 ];
