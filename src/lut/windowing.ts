@@ -1,4 +1,4 @@
-import { LutTypes, BaseLut } from './';
+import { LutTypes, BaseLut } from './base';
 import { Image } from '../image';
 import { LutRendererWebgl } from '../renderer/webgl';
 import { LutRenderer2D } from '../renderer/2d';

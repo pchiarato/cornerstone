@@ -6,17 +6,6 @@ import { IdentityLutRenderer2D, IdentityLutRendererWebgl, InvertLutRenderer2D, I
 import { LinearLutRenderer2D, LinearLutRendererWebgl, LinearLut } from './linear';
 import { WindowingLutRenderer2D, WindowingLutRendererWebgl, ThresholdWindowingLutRenderer2D, ThresholdWindowingLutRendererWebgl, WindowingLut } from './windowing';
 
-
-export interface BaseLut {
-	type: LutTypes;
-}
-
-export const enum LutTypes {
-	INVERSE,
-	LINEAR,
-	WINDOWING
-}
-
 export type Lut = IdentityLut | InvertLut | LinearLut | WindowingLut;
 
 export const Lut2DProviders: Provider[] = [

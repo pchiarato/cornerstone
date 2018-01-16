@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, OnDestroy, Output, Renderer2, SimpleChanges } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, Renderer2, SimpleChanges } from '@angular/core';
 
 import { distinctUntilChanged } from 'rxjs/operator/distinctUntilChanged';
 
@@ -18,24 +18,30 @@ export enum STATUS {
 // TODO directive on canvas ?
 @Component({
     selector: 'img-view',
-    template: '<canvas #canvas></canvas>',
+    template: `
+        <canvas #canvas></canvas>
+        <ng-content></ng-content>
+    `,
     styles: [`
-		canvas{
-			background: white;
-
-			position: absolute;
+        :host {
+            display: block;
+            position: absolute;
 			top: 50%;
 			left: 50%;
 
 			transform: translate(-50%,-50%);
+        }
+		canvas{
+			background: white;
 
+            /* why again ? */
 			-webkit-touch-callout: none;
 			-webkit-user-select: none;
 			-khtml-user-select: none;
 			-moz-user-select: none;
 			-ms-user-select: none;
 			user-select: none;
-		}
+        }
 	`],
     changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -43,8 +49,10 @@ export class ImageViewComponent extends AbtractView implements OnChanges, OnDest
 
     @Input() set transform(tr: Transform){
         // using renderer instead of binding to avoid sanitization toCSSString() already does sanitization
-        this.domRenderer.setStyle(this.canvas, 'transform', toCSSString(tr));
+        this.domRenderer.setStyle(this.el, 'transform', toCSSString(tr));
     };
+
+    private el: HTMLElement;
 
     private statusSubject = new EventEmitter<STATUS>();
     @Output() status = distinctUntilChanged.call(this.statusSubject);
@@ -57,8 +65,10 @@ export class ImageViewComponent extends AbtractView implements OnChanges, OnDest
         );
     }
 
-    constructor(private domRenderer: Renderer2, rendering: RenderersManager) {
+    constructor(elRef: ElementRef, private domRenderer: Renderer2, rendering: RenderersManager) {
         super(rendering);
+
+        this.el = elRef.nativeElement;
     }
 
     ngOnChanges(changes: SimpleChanges) {
@@ -71,7 +81,10 @@ export class ImageViewComponent extends AbtractView implements OnChanges, OnDest
         if ('image' in changes ) {
             if (this.image != null) {
                 this.canvas.width = this.image.width;
+                this.domRenderer.setStyle(this.el, 'width', this.image.width + 'px');
+
                 this.canvas.height = this.image.height;
+                this.domRenderer.setStyle(this.el, 'height', this.image.height + 'px');
             }
             else
                 this.canvas.width = this.canvas.height = 0;

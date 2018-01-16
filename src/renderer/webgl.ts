@@ -5,7 +5,7 @@ import { map } from 'rxjs/operator/map';
 import { Subject } from 'rxjs/Subject';
 
 import { Image } from '../image';
-import { BaseLut, Lut } from '../lut';
+import { Lut } from '../lut';
 import { Renderer, RenderItem } from './';
 import { Lookupable, RenderersManager } from './manager';
 
@@ -22,7 +22,7 @@ export interface LutRendererWebgl<T extends Lut> extends Lookupable<Lut> {
     initShaderStatements: string,
     transformShaderStatements: string,
     updateValues(gl: WebGLRenderingContext, program: WebGLProgram, lut: T): void
-    match(v: BaseLut): v is T;
+    match(v: Lut): v is T;
 }
 
 export const LUT_RENDERER_WEBGL = new InjectionToken<LutRendererWebgl<Lut>[]>('Lut renderer webgl');
@@ -80,7 +80,7 @@ function getHighpPrecision(gl: WebGLRenderingContext) {
 export class WebGLRenderer implements Renderer {
 
     private image?: Image;
-    private luts: BaseLut[];
+    private luts: Lut[];
 
     private shaderCache: {[id: number]: WebGLProgram} = {};
     private shader: WebGLProgram;
@@ -158,13 +158,6 @@ export class WebGLRenderer implements Renderer {
      *  - do nothing and return false
      *  - reuse a previously cached shader program and return true
      *  - create a new shader program and return true
-     *
-     * @private
-     * @param {number} id
-     * @param {ImageRenderer} imageRenderer
-     * @param {LutRenderer} lutRenderer
-     * @returns
-     * @memberof WebGLRenderer
      */
     private setShaderProgram(id: number, imageRenderer: ImageRendererWebgl, lutsRenderer: LutRendererWebgl<Lut>[]) {
         let shader = this.shaderCache[id];

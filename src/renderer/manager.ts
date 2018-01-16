@@ -1,6 +1,6 @@
 import { Injectable, Injector } from '@angular/core';
 import { Image } from '../image';
-import { BaseLut, Lut, } from '../lut';
+import { Lut, } from '../lut';
 import { ImageRenderer2D, IMAGE_RENDERER_2D, LutRenderer2D, LUT_RENDERER_2D } from './2d';
 import { ImageRendererWebgl, IMAGE_RENDERER_WEBGL, LutRendererWebgl, LUT_RENDERER_WEBGL } from './webgl';
 
@@ -12,7 +12,7 @@ export class InvalidImageError {
     constructor(public image: Image) {}
 }
 
-export class InvalidLutError<T extends BaseLut> {
+export class InvalidLutError<T extends Lut> {
     constructor(public lut: T) {}
 }
 
