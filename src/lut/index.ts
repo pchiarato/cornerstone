@@ -1,4 +1,4 @@
-import { Provider } from '@angular/core/core';
+import { Provider } from '@angular/core';
 import { LUT_RENDERER_2D } from '../renderer/2d';
 import { LUT_RENDERER_WEBGL } from '../renderer/webgl';
 
