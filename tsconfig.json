@@ -14,7 +14,14 @@
         ],
         "target": "es2015",
         "inlineSources": true,
-        "stripInternal": true
+        "stripInternal": true,
+        "typeRoots": [
+            "node_modules/@types"
+        ],
+        "types": [
+            "jasmine",
+            "node"
+        ]
     },
     "files": [
         "src/index.ts"
