@@ -1,8 +1,4 @@
-import { InjectionToken } from '@angular/core';
-
-import { Observable } from 'rxjs/Observable';
-import { map } from 'rxjs/operator/map';
-import { Subject } from 'rxjs/Subject';
+import { EventEmitter, InjectionToken } from '@angular/core';
 
 import { Image } from '../image';
 import { Lut } from '../lut';
@@ -27,9 +23,30 @@ export interface LutRendererWebgl<T extends Lut> extends Lookupable<Lut> {
 
 export const LUT_RENDERER_WEBGL = new InjectionToken<LutRendererWebgl<Lut>[]>('Lut renderer webgl');
 
+/*
 // TODO: we could probably reduce the computation if we passed windowCenter and windowWidth as float on a [0-1] or [0-2] range.
 // instead of reconverting the color in the range [0-255] to apply the lut and then back in [0-1]
 // But to do that I need to setup a test and be sure the output is **exactly** the same.
+const fragShader = (initStatements: string, colorStatements: string, transformStatements: string) => `
+    precision mediump float;
+
+    varying vec2 v_texcoord;
+    uniform sampler2D u_texture;
+
+   ${initStatements}
+
+    void main() {
+        vec4 t = texture2D(u_texture, v_texcoord);
+        vec4 v;
+
+        ${colorStatements}
+        ${transformStatements}
+
+        gl_FragColor = v / 255.0;
+    }
+`;
+*/
+
 const fragShader = (initStatements: string, colorStatements: string, transformStatements: string) => `
     precision mediump float;
 
@@ -85,28 +102,20 @@ export class WebGLRenderer implements Renderer {
     private shaderCache: {[id: number]: WebGLProgram} = {};
     private shader: WebGLProgram;
 
-    private pipeline = new Subject<RenderItem>();
-
-    output: Observable<Error | Image> = map.call(this.pipeline, (item: RenderItem) => this.render(item));
+    output = new EventEmitter<Error | Image>();
 
     constructor(private gl: WebGLRenderingContext, private rendering: RenderersManager) {
          this.initTexture();
     }
 
-    draw(image: Image, luts = []) {
-        this.pipeline.next({image, luts})
-    }
-
     destroy() {
-        this.pipeline.unsubscribe();
-
         // TODO better way to clean
         const extension = this.gl.getExtension('WEBGL_lose_context');
         if (extension != null)
             extension.loseContext();
 	}
 
-    protected render({image, luts}: RenderItem) {
+    draw(image: Image, luts = []) {
         try {
             const [id, imageRenderer, lutsRenderer] = this.rendering.getWebglRenderers(image, luts);
             const newShader = this.setShaderProgram(id, imageRenderer, lutsRenderer);
@@ -131,9 +140,9 @@ export class WebGLRenderer implements Renderer {
             // TODO protect against too much refresh call
             this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
 
-            return image;
+            this.output.emit(image);
         } catch (e) {
-            return e;
+            this.output.emit(e);
         }
     }
 
