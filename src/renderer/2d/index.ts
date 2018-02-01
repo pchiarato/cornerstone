@@ -1,11 +1,8 @@
-import { InjectionToken, EventEmitter } from '@angular/core';
+import { InjectionToken, EventEmitter, SkipSelf, Optional, Provider, forwardRef } from '@angular/core';
 import {  Lut } from '../../lut';
 import { Image } from '../../image';
 import { RenderersManager, Lookupable } from '../manager';
-import { Renderer, RenderItem } from '../';
-import { Subscriber } from 'rxjs/Subscriber';
-import { Observable } from 'rxjs/Observable';
-import { Subject } from 'rxjs/Subject';
+import { Renderer } from '../';
 
 declare var __zone_symbol__requestAnimationFrame: (f: Function) => number;
 
@@ -25,7 +22,6 @@ export const LUT_RENDERER_2D = new InjectionToken<LutRenderer2D[]>('Lut renderer
 
 export class Canvas2DRenderer implements Renderer {
 
-	private context: CanvasRenderingContext2D;
 	private imgData: ImageData;
 
 	private runningId: number | null = null;
@@ -33,14 +29,8 @@ export class Canvas2DRenderer implements Renderer {
 
 	output = new EventEmitter<Error | Image>();
 
-	constructor(private canvas: HTMLCanvasElement, private manager: RenderersManager) {
-		const context = canvas.getContext('2d');
-
-		if (!context)
-			throw 'no 2d context';
-
-		this.context = context;
-		this.imgData = context.createImageData(1, 1);
+	constructor(private ctx: CanvasRenderingContext2D, private manager: RenderersManager) {
+		this.imgData = ctx.createImageData(1, 1);
 	}
 
 	draw(image: Image, luts = []) {
@@ -52,6 +42,8 @@ export class Canvas2DRenderer implements Renderer {
 	}
 
 	destroy() {
+		this.output.unsubscribe();
+
 		if (this.runningId !== null)
 			cancelAnimationFrame(this.runningId);
 	}
@@ -59,13 +51,13 @@ export class Canvas2DRenderer implements Renderer {
 	private render(image: Image, luts: Lut[]) {
 		this.runningId = __zone_symbol__requestAnimationFrame( () => {
 			try {
-				if (this.canvas.width !== this.imgData.width || this.canvas.height !== this.imgData.height) {
-					this.imgData = this.context.createImageData(this.canvas.width, this.canvas.height);
+				if (image.width !== this.imgData.width || image.height !== this.imgData.height) {
+					this.imgData = this.ctx.createImageData(image.width, image.height);
 				}
 
 				this.manager.get2DRenderingFunction(image, luts)
 					.apply(null, [image, this.imgData, ...luts]);
-				this.context.putImageData(this.imgData, 0, 0);
+				this.ctx.putImageData(this.imgData, 0, 0);
 
 				this.output.emit(image);
 			} catch (e) {
@@ -80,3 +72,24 @@ export class Canvas2DRenderer implements Renderer {
 		});
 	}
 }
+
+export class Canvas2DRendererBuilder {
+	constructor(private renderer: RenderersManager) { }
+
+	create(ctx: CanvasRenderingContext2D) {
+		return new Canvas2DRenderer(ctx, this.renderer);
+	}
+}
+
+export function factory(parent: Canvas2DRendererBuilder, renderer: RenderersManager) {
+	return parent || new Canvas2DRendererBuilder(renderer);
+}
+
+// TODO rollup module order is wrong, using RenderersManager before its definition
+// forwardRef save us here
+
+export const Canvas2DRendererProvider: Provider = {
+	provide: Canvas2DRendererBuilder,
+	deps: [[new SkipSelf(), new Optional(), Canvas2DRendererBuilder], forwardRef( () => RenderersManager )],
+	useFactory: factory
+};

@@ -1,5 +1,5 @@
 import { createWebglSpy, Spy } from './webglrenderingcontext.mock';
-import { TextureManager } from '../../../src/renderer/texture.manager';
+import { TextureManager } from '../../../src/renderer/webgl/texture.manager';
 import { GrayscaleUint16Renderer } from '../../../src/image/webgl_renderer';
 import { Image } from '../../../src/image/index';
 
@@ -16,7 +16,7 @@ function emptyImage(width = 5, height = 5): Image {
 
 const defaultMaxTexCount = 5;
 
-fdescribe('Texture Manager', () => {
+describe('Texture Manager', () => {
 	let gl: Spy<WebGLRenderingContext>;
 	let texManager: TextureManager;
 	let imgBuildSpy: jasmine.Spy;
@@ -73,7 +73,7 @@ fdescribe('Texture Manager', () => {
 
 		texManager.bindTexture(symbol, image, imgRenderer);
 
-		expect(gl.activeTexture).toHaveBeenCalledWith(texId);
+		expect(gl.activeTexture).not.toHaveBeenCalled();
 		expect(gl.createTexture).not.toHaveBeenCalled();
 		expect(imgBuildSpy).not.toHaveBeenCalled();
 	});
@@ -90,8 +90,8 @@ fdescribe('Texture Manager', () => {
 
 		texManager.bindTexture(symbol, emptyImage(), imgRenderer);
 
-		expect(gl.activeTexture).toHaveBeenCalledWith(texId);
 		expect(gl.createTexture).not.toHaveBeenCalled();
+		expect(gl.activeTexture).toHaveBeenCalledWith(texId);
 		expect(imgBuildSpy).toHaveBeenCalled();
 	});
 

@@ -1,14 +1,14 @@
 export interface Image {
 
-    width: number;
-    height: number;
+	width: number;
+	height: number;
 
-    components: number;
+	components: number;
 
-    pixelData: ArrayBufferView;
+	pixelData: ArrayBufferView;
 
 	rowPixelSpacing?: number;
 	columnPixelSpacing?: number;
 	minPixelValue?: number;
-    maxPixelValue?: number;
+	maxPixelValue?: number;
 }

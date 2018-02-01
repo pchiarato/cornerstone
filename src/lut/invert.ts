@@ -8,27 +8,28 @@ export interface InvertLut extends BaseLut {
 }
 
 export const InvertLut = {
-	match: (lut: BaseLut): lut is InvertLut =>
-		lut.type === LutTypes.INVERSE && (<InvertLut>lut).invert !== false,
-	isCompatible: () => true
-}
+	match(lut: BaseLut): lut is InvertLut {
+		return lut.type === LutTypes.INVERSE && (<InvertLut>lut).invert !== false;
+	},
+	isCompatible() { return true; }
+};
 
 export const InvertLutRenderer2D: LutRenderer2D = {
-    match: InvertLut.match,
+	match: InvertLut.match,
 
-    argName: 'invertLut',
-    initStatements: '',
-    transformStatements: 'v = 255 - v;',
-}
+	argName: 'invertLut',
+	initStatements: '',
+	transformStatements: 'v = 255 - v;',
+};
 
 export const InvertLutRendererWebgl: LutRendererWebgl<InvertLut> = {
-    match: InvertLut.match,
+	match: InvertLut.match,
 
-    initShaderStatements: '',
-    // TODO probably more efficient way to do that
-    transformShaderStatements: 'v = vec4(255. - v.r, 255. - v.g, 255. - v.b, v.a);',
-    updateValues: () => { }
-}
+	initShaderStatements: '',
+	// TODO probably more efficient way to do that
+	transformShaderStatements: 'v = vec4(255. - v.r, 255. - v.g, 255. - v.b, v.a);',
+	updateValues() { }
+};
 
 /************ Identity (special invert) ************/
 export interface IdentityLut extends BaseLut {
@@ -37,24 +38,24 @@ export interface IdentityLut extends BaseLut {
 }
 
 export const IdentityLut = {
-	match: (lut: BaseLut): lut is IdentityLut =>
-		lut.type === LutTypes.INVERSE && (<IdentityLut>lut).invert === false,
-	isCompatible: () => true
-}
+	match(lut: BaseLut): lut is IdentityLut {
+		return lut.type === LutTypes.INVERSE && (<IdentityLut>lut).invert === false;
+	},
+	isCompatible() { return true; }
+};
 
 export const IdentityLutRenderer2D: LutRenderer2D = {
-    match: IdentityLut.match,
+	match: IdentityLut.match,
 
-    argName: 'identityLut',
-    initStatements: '',
-    transformStatements: ''
-}
+	argName: 'identityLut',
+	initStatements: '',
+	transformStatements: ''
+};
 
 export const IdentityLutRendererWebgl: LutRendererWebgl<IdentityLut> = {
-    match: IdentityLut.match,
+	match: IdentityLut.match,
 
-    initShaderStatements: '',
-    transformShaderStatements: '',
-    updateValues: () => { }
-}
-
+	initShaderStatements: '',
+	transformShaderStatements: '',
+	updateValues() { }
+};

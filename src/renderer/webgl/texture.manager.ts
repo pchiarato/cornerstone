@@ -1,8 +1,8 @@
-// import { Injectable } from '@angular/core';
-import { OffscreenWebgl } from './offscreen.webgl';
-import { Image } from '../image/index';
-import { WebGLRenderer, ImageRendererWebgl } from './webgl';
-import { LRUMap, Entry } from 'lru_map';
+import { Image } from '../../image/index';
+import { ImageRendererWebgl } from './';
+import { LRUMap } from '../../external/lrumap';
+import { SkipSelf, Optional, Provider, Inject } from '@angular/core';
+import { GL_CONTEXT } from './context';
 
 interface TextureContext {
 	id: number;
@@ -15,12 +15,12 @@ export class TextureManager {
 	private freeIds: number[] = [];
 	private texContext: LRUMap<Symbol, TextureContext>;
 
-	constructor(private gl: WebGLRenderingContext) {
+	constructor(private gl: any) {
 		const maxTexture = gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
 		const freeIds = [];
 
-		for (let i = 0; i < maxTexture; i++) {
-			freeIds.push(gl.TEXTURE0 + i);
+		for (let i = maxTexture - 1; i >= 0 ; i--) {
+			freeIds.push(i);
 		}
 
 		this.texContext = new LRUMap<Symbol, TextureContext>(maxTexture);
@@ -29,33 +29,36 @@ export class TextureManager {
 
 	bindTexture(symbol: Symbol, image: Image, imgRenderer: ImageRendererWebgl) {
 		let context = this.texContext.get(symbol);
-		if (context !== undefined) {
-			this.gl.activeTexture(context.id);
-
-			if (context.image !== image) {
-				imgRenderer.buildTexture(this.gl, image);
-			}
-		} else {
-			this.addTexture(symbol, image, imgRenderer);
+		if (context === undefined) {
+			context = this.createTextureContext(image, imgRenderer);
+			this.texContext.set(symbol, context);
 		}
+
+		if (context.image !== image) {
+			this.gl.activeTexture(this.gl.TEXTURE0 + context.id);
+			imgRenderer.buildTexture(this.gl, image);
+		}
+
+		return context.id;
 	}
 
 	clearTexture(symbol: Symbol) {
+		// TODO activateTexture and bind to null ?
 		const ctx = this.texContext.delete(symbol);
 		this.freeTexture(ctx);
 	}
 
-	private addTexture(symbol: Symbol, image: Image, imgRenderer: ImageRendererWebgl) {
+	private createTextureContext(image: Image, imgRenderer: ImageRendererWebgl) {
 		if (this.freeIds.length === 0) {
 			this.freeSpace();
 		}
 
-		if (this.freeIds.length === 0) {
+		const id = this.freeIds.pop();
+		if (id === undefined) {
 			throw new Error('unable to free space');
 		}
 
-		const id = this.freeIds.pop();
-		this.gl.activeTexture(id);
+		this.gl.activeTexture(this.gl.TEXTURE0 + id);
 
 		let texture: WebGLTexture | number;
 		do {
@@ -71,19 +74,19 @@ export class TextureManager {
 			}
 		} while ( !(texture instanceof WebGLTexture) );
 
-		this.texContext.set(symbol, {
+		return {
 			id,
 			texture,
 			image,
-		});
+		};
 	}
 
 	private createTexture(image: Image, imgRenderer: ImageRendererWebgl) {
-		const gl = this.gl;
+		const { gl } = this;
 		const texture = gl.createTexture();
 
 		if (texture == null) {
-			return;
+			return gl.OUT_OF_MEMORY;
 		}
 
 		gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -118,3 +121,15 @@ export class TextureManager {
 	}
 }
 
+export function factory(parent: TextureManager, gl: WebGLRenderingContext) {
+	if (parent != null) return parent;
+	if (gl == null) return null;
+
+	return new TextureManager(gl);
+}
+
+export const TextureManagerProvider: Provider = {
+	provide: TextureManager,
+	deps: [[new SkipSelf(), new Optional(), TextureManager], GL_CONTEXT],
+	useFactory: factory
+};

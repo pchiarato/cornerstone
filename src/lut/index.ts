@@ -1,6 +1,6 @@
 import { Provider } from '@angular/core';
-import { LUT_RENDERER_2D } from '../renderer/2d';
-import { LUT_RENDERER_WEBGL } from '../renderer/webgl';
+import { LUT_RENDERER_2D } from '../renderer/2d/index';
+import { LUT_RENDERER_WEBGL } from '../renderer/webgl/index';
 
 import { IdentityLutRenderer2D, IdentityLutRendererWebgl, InvertLutRenderer2D, InvertLutRendererWebgl, IdentityLut, InvertLut } from './invert';
 import { LinearLutRenderer2D, LinearLutRendererWebgl, LinearLut } from './linear';
